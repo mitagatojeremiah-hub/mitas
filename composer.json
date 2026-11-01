@@ -1,0 +1,8 @@
+{
+  "name": "mitas/business-online-hub",
+  "description": "Mitas Business Online Hub PHP + SQLite app",
+  "type": "project",
+  "require": {
+    "aws/aws-sdk-php": "^3.272"
+  }
+}

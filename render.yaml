@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: mitas-business-online-hub
+    env: docker
+    branch: main
+    dockerfilePath: ./Dockerfile
+    plan: free
+    buildCommand: docker build -t mitas-business-online-hub .
+    startCommand: apache2-foreground
+    envVars:
+      - key: RENDER_ENV
+        value: production

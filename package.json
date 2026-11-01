@@ -1,0 +1,14 @@
+{
+  "name": "mitas-inventory-system",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": ["backend", "frontend"],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace backend\" \"npm run dev --workspace frontend\"",
+    "build": "npm run build --workspace frontend",
+    "lint:php": "node ./scripts/lint-php.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.0"
+  }
+}
