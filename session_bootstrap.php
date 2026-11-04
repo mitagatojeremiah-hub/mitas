@@ -95,12 +95,18 @@ function mitas_start_session(): void
     try {
         $pdo = mitas_db();
     } catch (Throwable $error) {
-        error_log('Mitas database initialization failed; connection details were omitted.');
+        $databaseUrlConfigured = trim((string)getenv('DATABASE_URL')) !== '';
+        $errorCode = $error instanceof PDOException ? (string)$error->getCode() : 'configuration';
+        error_log('Mitas database initialization failed; type=' . get_class($error) . '; code=' . $errorCode . '; connection details omitted.');
         $isVercel = getenv('VERCEL') === '1';
         $title = $isVercel ? 'Database setup required' : 'Database unavailable';
-        $message = $isVercel
-            ? 'Add DATABASE_URL in Vercel Project Settings using your Supabase PostgreSQL Session pooler URL, then redeploy. If it is already set, verify the URL and database password.'
-            : 'Check the database configuration and make sure the database server is available.';
+        if ($isVercel && !$databaseUrlConfigured) {
+            $message = 'DATABASE_URL is missing from this Vercel deployment. Add the Supabase PostgreSQL Session pooler URL to the Preview environment, then redeploy this branch.';
+        } elseif ($isVercel) {
+            $message = 'DATABASE_URL is present, but the database connection failed. Verify the Supabase Session pooler host, encoded password, sslmode=require, and this deployment’s Vercel environment scope. Check Vercel logs for SQLSTATE ' . $errorCode . '.';
+        } else {
+            $message = 'Check the database configuration and make sure the database server is available.';
+        }
         mitas_render_setup_error($title, $message);
     }
 
