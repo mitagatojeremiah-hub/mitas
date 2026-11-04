@@ -7,6 +7,7 @@ ini_set('session.cookie_httponly', 1);
 ini_set('session.use_strict_mode', 1);
 ini_set('session.cookie_samesite', 'Lax');
 session_start();
+require_once __DIR__ . '/auth.php';
 
 // CSRF token
 if (!isset($_SESSION['csrf_token'])) {
@@ -31,6 +32,37 @@ $translations = [
         'welcome' => 'Welcome to the online business system',
         'subtitle' => 'Manage inventory, customers, sales, and invoices from any browser.',
         'login_title' => 'Secure Login',
+        'login_choose_title' => 'Choose your sign-in',
+        'login_choose_description' => 'Select the sign-in page assigned to your account.',
+        'login_admin_title' => 'Administrator sign-in',
+        'login_staff_title' => 'Staff sign-in',
+        'login_manager_title' => 'Manager sign-in',
+        'role_admin' => 'Admin',
+        'role_staff' => 'Staff',
+        'role_manager' => 'Manager',
+        'login_admin_description' => 'Sign in with your administrator account.',
+        'login_staff_description' => 'Sign in with your staff account.',
+        'login_manager_description' => 'Sign in with your manager account.',
+        'back_to_roles' => 'Choose another role',
+        'continue_to_login' => 'Continue to sign in',
+        'skip_to_content' => 'Skip to content',
+        'account_management' => 'Account management',
+        'create_account' => 'Create account',
+        'new_account_password' => 'Password (at least 12 characters)',
+        'account_role' => 'Role',
+        'account_status' => 'Status',
+        'active' => 'Active',
+        'inactive' => 'Inactive',
+        'save_account' => 'Save account',
+        'save_new_account' => 'Create account',
+        'reset_password' => 'New password (leave blank to keep current)',
+        'account_created' => 'Account created successfully.',
+        'account_updated' => 'Account updated successfully.',
+        'account_exists' => 'That username is already in use.',
+        'account_invalid' => 'Enter a valid username, role, and status.',
+        'password_too_short' => 'Password must be at least 12 characters.',
+        'account_self_lockout' => 'You cannot deactivate or change the role of your own account.',
+        'last_admin_required' => 'At least one active Admin account must remain.',
         'username' => 'Username',
         'password' => 'Password',
         'login' => 'Login',
@@ -115,6 +147,37 @@ $translations = [
         'welcome' => 'Karibu kwenye mfumo wa biashara mtandaoni',
         'subtitle' => 'Dhibiti hesabu, wateja, mauzo, na ankara kutoka kivinjari chochote.',
         'login_title' => 'Kuingia Salama',
+        'login_choose_title' => 'Chagua ukurasa wa kuingia',
+        'login_choose_description' => 'Chagua ukurasa wa kuingia uliotengewa akaunti yako.',
+        'login_admin_title' => 'Kuingia kwa msimamizi',
+        'login_staff_title' => 'Kuingia kwa mfanyakazi',
+        'login_manager_title' => 'Kuingia kwa meneja',
+        'role_admin' => 'Msimamizi',
+        'role_staff' => 'Mfanyakazi',
+        'role_manager' => 'Meneja',
+        'login_admin_description' => 'Ingia kwa kutumia akaunti yako ya msimamizi.',
+        'login_staff_description' => 'Ingia kwa kutumia akaunti yako ya mfanyakazi.',
+        'login_manager_description' => 'Ingia kwa kutumia akaunti yako ya meneja.',
+        'back_to_roles' => 'Chagua nafasi nyingine',
+        'continue_to_login' => 'Endelea kuingia',
+        'skip_to_content' => 'Ruka hadi kwenye maudhui',
+        'account_management' => 'Usimamizi wa akaunti',
+        'create_account' => 'Tengeneza akaunti',
+        'new_account_password' => 'Nenosiri (angalau herufi 12)',
+        'account_role' => 'Nafasi',
+        'account_status' => 'Hali',
+        'active' => 'Inatumika',
+        'inactive' => 'Haifanyi kazi',
+        'save_account' => 'Hifadhi akaunti',
+        'save_new_account' => 'Tengeneza akaunti',
+        'reset_password' => 'Nenosiri jipya (acha wazi kuhifadhi la sasa)',
+        'account_created' => 'Akaunti imetengenezwa.',
+        'account_updated' => 'Akaunti imesasishwa.',
+        'account_exists' => 'Jina hilo la mtumiaji tayari linatumika.',
+        'account_invalid' => 'Weka jina, nafasi na hali sahihi.',
+        'password_too_short' => 'Nenosiri lazima liwe na herufi 12 au zaidi.',
+        'account_self_lockout' => 'Huwezi kuzima akaunti yako au kubadilisha nafasi yako.',
+        'last_admin_required' => 'Lazima ibaki angalau akaunti moja ya Msimamizi inayotumika.',
         'username' => 'Jina la mtumiaji',
         'password' => 'Neno la siri',
         'login' => 'Ingia',
@@ -207,6 +270,16 @@ if (!isset($translations[$language])) {
 $_SESSION['lang'] = $language;
 
 $labels = $translations[$language];
+$loginRoles = [
+    'admin' => ['label' => $labels['role_admin'], 'title' => $labels['login_admin_title'], 'description' => $labels['login_admin_description']],
+    'staff' => ['label' => $labels['role_staff'], 'title' => $labels['login_staff_title'], 'description' => $labels['login_staff_description']],
+    'manager' => ['label' => $labels['role_manager'], 'title' => $labels['login_manager_title'], 'description' => $labels['login_manager_description']],
+];
+$loginRoleValue = $_POST['login_role'] ?? $_GET['role'] ?? '';
+$loginRole = is_string($loginRoleValue) ? strtolower(trim($loginRoleValue)) : '';
+if (!array_key_exists($loginRole, $loginRoles)) {
+    $loginRole = '';
+}
 
 $pdo = new PDO('sqlite:' . $dbFile);
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -324,8 +397,10 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'admin'
+    role TEXT NOT NULL DEFAULT 'admin',
+    is_active INTEGER NOT NULL DEFAULT 1
 );");
+mitas_ensure_user_schema($pdo);
 $pdo->exec("CREATE TABLE IF NOT EXISTS customers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -509,7 +584,8 @@ if (!$companyProfile) {
     $companyProfile = $pdo->query('SELECT * FROM company_profile ORDER BY id DESC LIMIT 1')->fetch(PDO::FETCH_ASSOC);
 }
 
-$loggedIn = isset($_SESSION['user_id']);
+$currentUser = mitas_current_user($pdo);
+$loggedIn = $currentUser !== null;
 if (isset($_POST['login_submit']) && $csrf_ok) {
     $username = trim($_POST['username'] ?? '');
     $password = (string)($_POST['password'] ?? '');
@@ -522,13 +598,23 @@ if (isset($_POST['login_submit']) && $csrf_ok) {
         $_SESSION['flash'] = 'Too many failed login attempts. Try again later.';
         audit_log($pdo, 'login_blocked', $username, 'Too many attempts from ' . ($ip ?? 'unknown'));
     } else {
-        $stmt = $pdo->prepare('SELECT id, password_hash FROM users WHERE username = ?');
-        $stmt->execute([$username]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        $submittedRoleValue = $_POST['login_role'] ?? '';
+        $submittedRole = is_string($submittedRoleValue) ? strtolower(trim($submittedRoleValue)) : '';
+        if (array_key_exists($submittedRole, $loginRoles)) {
+            $stmt = $pdo->prepare('SELECT id, password_hash, role FROM users WHERE username = ? AND LOWER(TRIM(role)) = ? AND is_active = 1');
+            $stmt->execute([$username, $submittedRole]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        } else {
+            $user = false;
+        }
         $success = 0;
         if ($user && password_verify($password, $user['password_hash'])) {
+            session_regenerate_id(true);
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+            $csrf_token = $_SESSION['csrf_token'];
             $_SESSION['user_id'] = (int)$user['id'];
             $_SESSION['username'] = $username;
+            $_SESSION['user_role'] = strtolower(trim($user['role']));
             $loggedIn = true;
             $success = 1;
             audit_log($pdo, 'login_success', $username, 'Logged in from ' . ($ip ?? 'unknown'));
@@ -551,6 +637,85 @@ if (isset($_POST['logout']) && $csrf_ok) {
 }
 
 if ($loggedIn) {
+        $roleActionPermissions = [
+            'trigger_backup' => 'backups.manage',
+            'company_name' => 'company.manage',
+            'product_name' => 'inventory.manage',
+            'customer_name' => 'customers.manage',
+            'supplier_name' => 'suppliers.manage',
+            'purchase_item' => 'purchases.manage',
+            'payment_amount' => 'payments.manage',
+            'mark_settled' => 'payments.manage',
+            'adjust_product_id' => 'inventory.manage',
+            'invoice_number' => 'invoices.manage',
+            'sale_customer' => 'sales.manage',
+            'create_user' => 'users.manage',
+            'update_user' => 'users.manage'
+        ];
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && $csrf_ok) {
+            foreach ($roleActionPermissions as $field => $permission) {
+                if (isset($_POST[$field]) && !mitas_can($permission)) {
+                    http_response_code(403);
+                    exit('Forbidden');
+                }
+            }
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user']) && $csrf_ok) {
+            $newUsername = trim((string)($_POST['new_username'] ?? ''));
+            $newPassword = (string)($_POST['new_password'] ?? '');
+            $newRole = strtolower(trim((string)($_POST['new_role'] ?? '')));
+            if ($newUsername === '' || strlen($newUsername) > 64 || !array_key_exists($newRole, $loginRoles)) {
+                $_SESSION['flash'] = $labels['account_invalid'];
+            } elseif (strlen($newPassword) < 12) {
+                $_SESSION['flash'] = $labels['password_too_short'];
+            } else {
+                try {
+                    $stmt = $pdo->prepare('INSERT INTO users (username, password_hash, role, is_active) VALUES (?, ?, ?, 1)');
+                    $stmt->execute([$newUsername, password_hash($newPassword, PASSWORD_DEFAULT), $newRole]);
+                    audit_log($pdo, 'user_created', $_SESSION['username'] ?? null, $newUsername . ' (' . $newRole . ')');
+                    $_SESSION['flash'] = $labels['account_created'];
+                } catch (PDOException $e) {
+                    $_SESSION['flash'] = $labels['account_exists'];
+                }
+            }
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user']) && $csrf_ok) {
+            $targetId = (int)($_POST['user_id'] ?? 0);
+            $targetRole = strtolower(trim((string)($_POST['account_role'] ?? '')));
+            $targetActive = (($_POST['account_active'] ?? '0') === '1') ? 1 : 0;
+            $resetPassword = (string)($_POST['reset_password'] ?? '');
+            $stmt = $pdo->prepare('SELECT id, username, LOWER(TRIM(role)) AS role, is_active FROM users WHERE id = ?');
+            $stmt->execute([$targetId]);
+            $targetUser = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$targetUser || !array_key_exists($targetRole, $loginRoles)) {
+                $_SESSION['flash'] = $labels['account_invalid'];
+            } elseif ($resetPassword !== '' && strlen($resetPassword) < 12) {
+                $_SESSION['flash'] = $labels['password_too_short'];
+            } elseif ($targetId === (int)$_SESSION['user_id'] && ($targetRole !== 'admin' || $targetActive !== 1)) {
+                $_SESSION['flash'] = $labels['account_self_lockout'];
+            } else {
+                $removesAdmin = $targetUser['role'] === 'admin'
+                    && (int)$targetUser['is_active'] === 1
+                    && ($targetRole !== 'admin' || $targetActive !== 1);
+                $activeAdminCount = (int)$pdo->query("SELECT COUNT(*) FROM users WHERE LOWER(TRIM(role)) = 'admin' AND is_active = 1")->fetchColumn();
+                if ($removesAdmin && $activeAdminCount <= 1) {
+                    $_SESSION['flash'] = $labels['last_admin_required'];
+                } else {
+                    $stmt = $pdo->prepare('UPDATE users SET role = ?, is_active = ? WHERE id = ?');
+                    $stmt->execute([$targetRole, $targetActive, $targetId]);
+                    if ($resetPassword !== '') {
+                        $stmt = $pdo->prepare('UPDATE users SET password_hash = ? WHERE id = ?');
+                        $stmt->execute([password_hash($resetPassword, PASSWORD_DEFAULT), $targetId]);
+                    }
+                    audit_log($pdo, 'user_updated', $_SESSION['username'] ?? null, $targetUser['username'] . ' (' . $targetRole . ')');
+                    $_SESSION['flash'] = $labels['account_updated'];
+                }
+            }
+        }
+
         // backup trigger
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['trigger_backup']) && $csrf_ok) {
             // call backup endpoint internally
@@ -832,7 +997,7 @@ if ($loggedIn) {
                 if ($customerName === '') {
                     $customerName = trim($orderRow['customer']);
                 }
-                $stmtOrderItems = $pdo->prepare('SELECT * FROM order_items WHERE order_id = ? ORDER BY id ASC');
+                $stmtOrderItems = $pdo->prepare('SELECT id, order_id, item, category, quantity, unit_price, discount_percent, vat_percent, vat_amount, amount, product_id, manufacturer, grade, condition FROM order_items WHERE order_id = ? ORDER BY id ASC');
                 $stmtOrderItems->execute([$invoiceOrderSource]);
                 $orderItems = $stmtOrderItems->fetchAll(PDO::FETCH_ASSOC);
                 if (!empty($orderItems)) {
@@ -1079,6 +1244,7 @@ if ($loggedIn) {
 $products = $pdo->query('SELECT * FROM products ORDER BY created_at DESC LIMIT 8')->fetchAll(PDO::FETCH_ASSOC);
 $customers = $pdo->query('SELECT * FROM customers ORDER BY created_at DESC LIMIT 8')->fetchAll(PDO::FETCH_ASSOC);
 $documentQueue = [];
+if (mitas_can('purchases.view')) {
 foreach ($pdo->query('SELECT id, item, quantity, amount, created_at FROM purchases ORDER BY created_at DESC LIMIT 6')->fetchAll(PDO::FETCH_ASSOC) as $row) {
     $documentQueue[] = [
         'type' => 'Purchase',
@@ -1088,6 +1254,7 @@ foreach ($pdo->query('SELECT id, item, quantity, amount, created_at FROM purchas
         'created_at' => $row['created_at'],
         'print_url' => null,
     ];
+}
 }
 foreach ($pdo->query('SELECT id, customer, item, quantity, amount, status, created_at FROM orders ORDER BY created_at DESC LIMIT 6')->fetchAll(PDO::FETCH_ASSOC) as $row) {
     $documentQueue[] = [
@@ -1114,7 +1281,7 @@ $documentQueue = array_slice($documentQueue, 0, 12);
 $suppliers = $pdo->query('SELECT * FROM suppliers ORDER BY created_at DESC LIMIT 8')->fetchAll(PDO::FETCH_ASSOC);
 $orders = $pdo->query('SELECT * FROM orders ORDER BY created_at DESC LIMIT 6')->fetchAll(PDO::FETCH_ASSOC);
 $orderItemsByOrder = [];
-$stmtOrderItems = $pdo->prepare('SELECT * FROM order_items WHERE order_id = ? ORDER BY id ASC');
+$stmtOrderItems = $pdo->prepare('SELECT id, order_id, item, category, quantity, unit_price, discount_percent, vat_percent, vat_amount, amount, product_id, manufacturer, grade, condition FROM order_items WHERE order_id = ? ORDER BY id ASC');
 foreach ($orders as $ord) {
     $stmtOrderItems->execute([(int)$ord['id']]);
     $orderItemsByOrder[(int)$ord['id']] = $stmtOrderItems->fetchAll(PDO::FETCH_ASSOC);
@@ -1182,6 +1349,14 @@ foreach ($pdo->query('SELECT id, customer_name, amount, created_at FROM payments
 }
 usort($liveActivity, function ($a, $b) { return strcmp($b['time'], $a['time']); });
 $liveActivity = array_slice($liveActivity, 0, 6);
+$managedUsers = [];
+if ($loggedIn && mitas_can('users.manage')) {
+    $managedUsers = $pdo->query('SELECT id, username, LOWER(TRIM(role)) AS role, is_active FROM users ORDER BY username')->fetchAll(PDO::FETCH_ASSOC);
+}
+$defaultAdminStmt = $pdo->prepare("SELECT password_hash FROM users WHERE username = 'admin' AND LOWER(TRIM(role)) = 'admin' AND is_active = 1 LIMIT 1");
+$defaultAdminStmt->execute();
+$defaultAdminHash = $defaultAdminStmt->fetchColumn();
+$showDefaultLogin = is_string($defaultAdminHash) && password_verify('admin123', $defaultAdminHash);
 ?>
 <!DOCTYPE html>
 <html lang="<?= htmlspecialchars($language) ?>">
@@ -1191,7 +1366,9 @@ $liveActivity = array_slice($liveActivity, 0, 6);
     <title><?= htmlspecialchars($labels['site_title']) ?></title>
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="<?= $loggedIn ? 'app-page' : 'guest-page' ?>">
+    <a class="skip-link" href="<?= $loggedIn ? '#app-main' : '#login-main' ?>"><?= htmlspecialchars($labels['skip_to_content']) ?></a>
+    <?php if ($loggedIn): ?>
     <div class="top-tool">
         <div class="top-tool-left">
             <button class="add-layout-btn" id="addLayoutBtn">Add Layout</button>
@@ -1200,10 +1377,12 @@ $liveActivity = array_slice($liveActivity, 0, 6);
             <strong><?= htmlspecialchars($labels['site_title']) ?></strong>
         </div>
         <div class="top-tool-right">
-            <div class="metric">
+            <?php if (mitas_can('inventory.cost.view')): ?>
+<div class="metric">
                 <span class="metric-label"><?= htmlspecialchars($labels['inventory_value']) ?></span>
                 <span class="metric-value" id="metric-inventory">TZS <?= number_format($totalValue, 0) ?></span>
             </div>
+<?php endif; ?>
             <div class="metric">
                 <span class="metric-label">Total Outstanding</span>
                 <span class="metric-value negative" id="metric-outstanding">TZS <?= number_format($totalOutstanding, 0) ?></span>
@@ -1212,14 +1391,18 @@ $liveActivity = array_slice($liveActivity, 0, 6);
                 <span class="metric-label">Total Sell</span>
                 <span class="metric-value positive" id="metric-total-sellings">TZS <?= number_format($revenue + $orderRevenue, 0) ?></span>
             </div>
-            <div class="metric">
+            <?php if (mitas_can('reports.view')): ?>
+<div class="metric">
                 <span class="metric-label">Total Profit</span>
                 <span class="metric-value positive" id="metric-total-profit">TZS <?= number_format($totalProfit, 0) ?></span>
             </div>
-            <div class="metric">
+<?php endif; ?>
+            <?php if (mitas_can('reports.view')): ?>
+<div class="metric">
                 <span class="metric-label">Total Loss</span>
                 <span class="metric-value negative" id="metric-total-loss">TZS <?= number_format($totalLoss, 0) ?></span>
             </div>
+<?php endif; ?>
         </div>
     </div>
     <header class="hero">
@@ -1283,24 +1466,48 @@ $liveActivity = array_slice($liveActivity, 0, 6);
         <canvas id="stockChartCanvas" width="860" height="300"></canvas>
     </section>
 
+    <?php endif; ?>
+
     <?php if (!empty($_SESSION['flash'])): ?>
-        <div class="flash"><?= htmlspecialchars($_SESSION['flash']) ?></div>
+        <div class="flash" role="alert" aria-live="assertive"><?= htmlspecialchars($_SESSION['flash']) ?></div>
         <?php unset($_SESSION['flash']); ?>
     <?php endif; ?>
 
     <?php if (!$loggedIn): ?>
-        <main class="login-wrap">
-            <section class="panel login-panel" data-panel="login">
-                <h2><?= htmlspecialchars($labels['login_title']) ?></h2>
-                <div class="panel-body">
-                <form method="post" class="stacked-form">
-                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                    <input type="text" name="username" placeholder="<?= htmlspecialchars($labels['username']) ?>" required>
-                    <input type="password" name="password" placeholder="<?= htmlspecialchars($labels['password']) ?>" required>
-                    <button type="submit" name="login_submit" value="1"><?= htmlspecialchars($labels['login']) ?></button>
-                </form>
-                <p class="hint"><?= htmlspecialchars($labels['default_login']) ?></p>
-                </div>
+        <main class="login-wrap" id="login-main">
+            <section class="panel login-panel <?= $loginRole === '' ? 'role-picker-panel' : 'role-form-panel' ?>" data-panel="login">
+                <?php if ($loginRole === ''): ?>
+                    <h2><?= htmlspecialchars($labels['login_choose_title']) ?></h2>
+                    <p class="login-intro"><?= htmlspecialchars($labels['login_choose_description']) ?></p>
+                    <div class="login-role-grid">
+                        <?php foreach ($loginRoles as $roleKey => $role): ?>
+                            <a class="login-role-card" href="?role=<?= rawurlencode($roleKey) ?>">
+                                <span class="login-role-icon" aria-hidden="true"><?= htmlspecialchars(strtoupper(substr($roleKey, 0, 1))) ?></span>
+                                <span class="login-role-title"><?= htmlspecialchars($role['label']) ?></span>
+                                <span class="login-role-description"><?= htmlspecialchars($role['description']) ?></span>
+                                <span class="login-role-action"><?= htmlspecialchars($labels['continue_to_login']) ?> <span aria-hidden="true">→</span></span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <a class="login-role-back" href="index.php">← <?= htmlspecialchars($labels['back_to_roles']) ?></a>
+                    <h2><?= htmlspecialchars($loginRoles[$loginRole]['title']) ?></h2>
+                    <p class="login-intro"><?= htmlspecialchars($loginRoles[$loginRole]['description']) ?></p>
+                    <div class="panel-body">
+                        <form method="post" class="stacked-form">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                            <input type="hidden" name="login_role" value="<?= htmlspecialchars($loginRole) ?>">
+                            <label for="loginUsername"><?= htmlspecialchars($labels['username']) ?></label>
+                            <input id="loginUsername" type="text" name="username" autocomplete="username" placeholder="<?= htmlspecialchars($labels['username']) ?>" required>
+                            <label for="loginPassword"><?= htmlspecialchars($labels['password']) ?></label>
+                            <input id="loginPassword" type="password" name="password" autocomplete="current-password" placeholder="<?= htmlspecialchars($labels['password']) ?>" required>
+                            <button type="submit" name="login_submit" value="1"><?= htmlspecialchars($labels['login']) ?></button>
+                        </form>
+                        <?php if ($loginRole === 'admin' && $showDefaultLogin): ?>
+                            <p class="hint"><?= htmlspecialchars($labels['default_login']) ?></p>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
             </section>
         </main>
     <?php else: ?>
@@ -1502,8 +1709,58 @@ $liveActivity = array_slice($liveActivity, 0, 6);
         
     </script>
 
-        <main class="grid">
-            <section class="panel" data-panel="add_product">
+        <main class="grid" id="app-main">
+            <?php if (mitas_can('users.manage')): ?>
+            <section class="panel account-management-panel" data-panel="account_management">
+                <h2><?= htmlspecialchars($labels['account_management']) ?></h2>
+                <div class="panel-body account-management-body">
+                    <form method="post" class="stacked-form account-create-form">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                        <label for="newUsername"><?= htmlspecialchars($labels['username']) ?></label>
+                        <input id="newUsername" type="text" name="new_username" autocomplete="off" maxlength="64" required>
+                        <label for="newUserRole"><?= htmlspecialchars($labels['account_role']) ?></label>
+                        <select id="newUserRole" name="new_role" required>
+                            <?php foreach ($loginRoles as $roleKey => $role): ?>
+                                <option value="<?= htmlspecialchars($roleKey) ?>"><?= htmlspecialchars($role['label']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <label for="newUserPassword"><?= htmlspecialchars($labels['new_account_password']) ?></label>
+                        <input id="newUserPassword" type="password" name="new_password" autocomplete="new-password" minlength="12" required>
+                        <button type="submit" name="create_user" value="1"><?= htmlspecialchars($labels['save_new_account']) ?></button>
+                    </form>
+
+                    <div class="account-list">
+                        <?php foreach ($managedUsers as $managedUser): ?>
+                            <?php $accountFormId = 'account-' . (int)$managedUser['id']; ?>
+                            <form method="post" class="account-row">
+                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                <input type="hidden" name="user_id" value="<?= (int)$managedUser['id'] ?>">
+                                <div class="account-row-heading">
+                                    <strong><?= htmlspecialchars($managedUser['username']) ?></strong>
+                                    <span class="account-status"><?= (int)$managedUser['is_active'] === 1 ? htmlspecialchars($labels['active']) : htmlspecialchars($labels['inactive']) ?></span>
+                                </div>
+                                <label for="<?= $accountFormId ?>-role"><?= htmlspecialchars($labels['account_role']) ?></label>
+                                <select id="<?= $accountFormId ?>-role" name="account_role" required>
+                                    <?php foreach ($loginRoles as $roleKey => $role): ?>
+                                        <option value="<?= htmlspecialchars($roleKey) ?>" <?= $managedUser['role'] === $roleKey ? 'selected' : '' ?>><?= htmlspecialchars($role['label']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <label for="<?= $accountFormId ?>-status"><?= htmlspecialchars($labels['account_status']) ?></label>
+                                <select id="<?= $accountFormId ?>-status" name="account_active" required>
+                                    <option value="1" <?= (int)$managedUser['is_active'] === 1 ? 'selected' : '' ?>><?= htmlspecialchars($labels['active']) ?></option>
+                                    <option value="0" <?= (int)$managedUser['is_active'] !== 1 ? 'selected' : '' ?>><?= htmlspecialchars($labels['inactive']) ?></option>
+                                </select>
+                                <label for="<?= $accountFormId ?>-password"><?= htmlspecialchars($labels['reset_password']) ?></label>
+                                <input id="<?= $accountFormId ?>-password" type="password" name="reset_password" autocomplete="new-password" minlength="12">
+                                <button type="submit" name="update_user" value="1"><?= htmlspecialchars($labels['save_account']) ?></button>
+                            </form>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </section>
+            <?php endif; ?>
+            <?php if (mitas_can('inventory.manage')): ?>
+<section class="panel" data-panel="add_product">
                 <h2><?= htmlspecialchars($labels['add_product']) ?></h2>
                 <div class="panel-body">
                 <form method="post" class="stacked-form">
@@ -1535,8 +1792,10 @@ $liveActivity = array_slice($liveActivity, 0, 6);
                 </form>
                 </div>
             </section>
+<?php endif; ?>
 
-            <section class="panel" data-panel="add_customer">
+            <?php if (mitas_can('customers.manage')): ?>
+<section class="panel" data-panel="add_customer">
                 <h2><?= htmlspecialchars($labels['add_customer']) ?></h2>
                 <div class="panel-body">
                 <form method="post" class="stacked-form">
@@ -1549,8 +1808,10 @@ $liveActivity = array_slice($liveActivity, 0, 6);
                 </form>
                 </div>
             </section>
+<?php endif; ?>
 
-            <section class="panel" data-panel="add_supplier">
+            <?php if (mitas_can('suppliers.manage')): ?>
+<section class="panel" data-panel="add_supplier">
                 <h2><?= htmlspecialchars($labels['add_supplier']) ?></h2>
                 <div class="panel-body">
                 <form method="post" class="stacked-form">
@@ -1563,8 +1824,10 @@ $liveActivity = array_slice($liveActivity, 0, 6);
                 </form>
                 </div>
             </section>
+<?php endif; ?>
 
-            <section class="panel" data-panel="company_profile">
+            <?php if (mitas_can('company.manage')): ?>
+<section class="panel" data-panel="company_profile">
                 <h2>Company Profile</h2>
                 <div class="panel-body">
                     <form method="post" class="stacked-form">
@@ -1585,8 +1848,10 @@ $liveActivity = array_slice($liveActivity, 0, 6);
                     </form>
                 </div>
             </section>
+<?php endif; ?>
 
-            <section class="panel" data-panel="create_purchase">
+            <?php if (mitas_can('sales.manage')): ?>
+<section class="panel" data-panel="create_purchase">
                 <h2><?= htmlspecialchars($labels['create_purchase']) ?></h2>
                 <div class="panel-body">
                 <form method="post" class="stacked-form">
@@ -1616,8 +1881,10 @@ $liveActivity = array_slice($liveActivity, 0, 6);
                 </form>
                 </div>
             </section>
+<?php endif; ?>
 
-            <section class="panel" data-panel="create_invoice">
+            <?php if (mitas_can('invoices.manage')): ?>
+<section class="panel" data-panel="create_invoice">
                 <h2><?= htmlspecialchars($labels['create_invoice']) ?></h2>
                 <div class="panel-body">
                     <form method="post" class="stacked-form">
@@ -1661,8 +1928,10 @@ $liveActivity = array_slice($liveActivity, 0, 6);
                     </form>
                     </div>
             </section>
+<?php endif; ?>
 
-                <section class="panel" data-panel="recent_orders">
+                <?php if (mitas_can('sales.manage')): ?>
+<section class="panel" data-panel="recent_orders">
                     <h2><?= htmlspecialchars($labels['recent_orders']) ?></h2>
                     <div class="panel-body">
                     <form method="post" class="stacked-form">
@@ -1684,8 +1953,10 @@ $liveActivity = array_slice($liveActivity, 0, 6);
                     </form>
                     </div>
                 </section>
+<?php endif; ?>
 
-                <section class="panel" data-panel="record_payment">
+                <?php if (mitas_can('payments.manage')): ?>
+<section class="panel" data-panel="record_payment">
                     <h2>Record Payment</h2>
                     <div class="panel-body">
                     <form method="post" class="stacked-form">
@@ -1748,8 +2019,10 @@ $liveActivity = array_slice($liveActivity, 0, 6);
                     </form>
                     </div>
                 </section>
+<?php endif; ?>
 
-                <section class="panel" data-panel="stock_adjustment">
+                <?php if (mitas_can('inventory.manage')): ?>
+<section class="panel" data-panel="stock_adjustment">
                     <h2>Stock Adjustment</h2>
                     <div class="panel-body">
                     <form method="post" class="stacked-form">
@@ -1789,9 +2062,11 @@ $liveActivity = array_slice($liveActivity, 0, 6);
                     </form>
                     </div>
                 </section>
+<?php endif; ?>
         </main>
 
-        <section class="panel table-panel" data-panel="balance_profile">
+        <?php if (mitas_can('payments.view')): ?>
+<section class="panel table-panel" data-panel="balance_profile">
             <h2>Balance Profile - Outstanding Balances</h2>
             <div class="panel-search">
                 <label class="search-label">🔍 Search:</label>
@@ -1882,8 +2157,10 @@ $liveActivity = array_slice($liveActivity, 0, 6);
                 </table>
             </div>
         </section>
+<?php endif; ?>
 
-        <section class="panel table-panel" data-panel="document_queue">
+        <?php if (mitas_can('invoices.view')): ?>
+<section class="panel table-panel" data-panel="document_queue">
             <h2><?= htmlspecialchars($labels['document_queue']) ?></h2>
             <div class="panel-search">
                 <label class="search-label">🔍 Search:</label>
@@ -1920,8 +2197,10 @@ $liveActivity = array_slice($liveActivity, 0, 6);
                 </table>
             </div>
         </section>
+<?php endif; ?>
 
-        <section class="panel table-panel" data-panel="inventory_list">
+        <?php if (mitas_can('inventory.view')): ?>
+<section class="panel table-panel" data-panel="inventory_list">
             <h2><?= htmlspecialchars($labels['inventory_list']) ?></h2>
             <div class="panel-search">
                 <label class="search-label">🔍 Search:</label>
@@ -1935,7 +2214,7 @@ $liveActivity = array_slice($liveActivity, 0, 6);
                         <th><?= htmlspecialchars($labels['category']) ?></th>
                         <th><?= htmlspecialchars($labels['quantity']) ?></th>
                         <th>Availability</th>
-                        <th><?= htmlspecialchars($labels['buy_price']) ?></th>
+                        <?php if (mitas_can('inventory.cost.view')): ?><th><?= htmlspecialchars($labels['buy_price']) ?></th><?php endif; ?>
                         <th><?= htmlspecialchars($labels['sell_price']) ?></th>
                         <th><?= htmlspecialchars($labels['location']) ?></th>
                         <th>Manufacturer</th>
@@ -1962,7 +2241,7 @@ $liveActivity = array_slice($liveActivity, 0, 6);
                             <td><?= htmlspecialchars($product['category']) ?></td>
                             <td><?= $qty ?></td>
                             <td><?= $qty > 0 ? 'In Stock' : 'Out of Stock' ?></td>
-                            <td>TZS <?= number_format((float)$product['buy_price'], 0) ?></td>
+                            <?php if (mitas_can('inventory.cost.view')): ?><td>TZS <?= number_format((float)$product['buy_price'], 0) ?></td><?php endif; ?>
                             <td>TZS <?= number_format((float)$product['sell_price'], 0) ?></td>
                             <td><?= htmlspecialchars($product['location']) ?></td>
                             <td><?= htmlspecialchars($product['manufacturer'] ?? '-') ?></td>
@@ -1974,8 +2253,10 @@ $liveActivity = array_slice($liveActivity, 0, 6);
             </table>
             </div>
         </section>
+<?php endif; ?>
 
-        <section class="panel table-panel" data-panel="customers">
+        <?php if (mitas_can('customers.view')): ?>
+<section class="panel table-panel" data-panel="customers">
             <h2><?= htmlspecialchars($labels['customers']) ?></h2>
             <div class="panel-search">
                 <label class="search-label">🔍 Search:</label>
@@ -2004,8 +2285,10 @@ $liveActivity = array_slice($liveActivity, 0, 6);
             </table>
             </div>
         </section>
+<?php endif; ?>
 
-        <section class="panel table-panel" data-panel="suppliers">
+        <?php if (mitas_can('suppliers.view')): ?>
+<section class="panel table-panel" data-panel="suppliers">
             <h2><?= htmlspecialchars($labels['suppliers']) ?></h2>
             <div class="panel-search">
                 <label class="search-label">🔍 Search:</label>
@@ -2034,8 +2317,10 @@ $liveActivity = array_slice($liveActivity, 0, 6);
             </table>
             </div>
         </section>
+<?php endif; ?>
 
-        <section class="panel table-panel" data-panel="purchases">
+        <?php if (mitas_can('purchases.view')): ?>
+<section class="panel table-panel" data-panel="purchases">
             <h2><?= htmlspecialchars($labels['purchases']) ?></h2>
             <div class="panel-search">
                 <label class="search-label">🔍 Search:</label>
@@ -2049,7 +2334,7 @@ $liveActivity = array_slice($liveActivity, 0, 6);
                         <th><?= htmlspecialchars($labels['item']) ?></th>
                         <th><?= htmlspecialchars($labels['quantity']) ?></th>
                         <th><?= htmlspecialchars($labels['amount']) ?></th>
-                        <th>Profit/Loss</th>
+                        <?php if (mitas_can('reports.view')): ?><th>Profit/Loss</th><?php endif; ?>
                         <th><?= htmlspecialchars($labels['status']) ?></th>
                     </tr>
                 </thead>
@@ -2068,12 +2353,12 @@ $liveActivity = array_slice($liveActivity, 0, 6);
                         $profitLabel = $profit > 0 ? 'Profit' : ($profit < 0 ? 'Loss' : 'Break-even');
                         $profitColor = $profit > 0 ? '#047857' : ($profit < 0 ? '#b91c1c' : '#1f2937');
                     ?>
-                        <tr style="<?= $statusColor ?>" data-search-text="<?= htmlspecialchars(strtolower($order['customer'] . ' ' . $order['item'] . ' ' . $status . ' ' . ($order['profit'] ?? ''))) ?>">
+                        <tr style="<?= $statusColor ?>" data-search-text="<?= htmlspecialchars(strtolower($order['customer'] . ' ' . $order['item'] . ' ' . $status . (mitas_can('reports.view') ? ' ' . ($order['profit'] ?? '') : ''))) ?>">
                             <td><?= htmlspecialchars($order['customer']) ?></td>
                             <td><?= htmlspecialchars($order['item']) ?></td>
                             <td><?= (int)$order['quantity'] ?></td>
                             <td>TZS <?= number_format((float)$order['amount'], 0) ?></td>
-                            <td style="color: <?= $profitColor ?>; font-weight: 600;"><?= $profitLabel ?><?= $profit !== 0 ? ' TZS ' . number_format(abs($profit), 0) : '' ?></td>
+                            <?php if (mitas_can('reports.view')): ?><td style="color: <?= $profitColor ?>; font-weight: 600;"><?= $profitLabel ?><?= $profit !== 0 ? ' TZS ' . number_format(abs($profit), 0) : '' ?></td><?php endif; ?>
                             <td><?= $status ?></td>
                         </tr>
                     <?php endforeach; ?>
@@ -2081,8 +2366,10 @@ $liveActivity = array_slice($liveActivity, 0, 6);
             </table>
             </div>
         </section>
+<?php endif; ?>
 
-        <section class="panel table-panel" data-panel="payments">
+        <?php if (mitas_can('payments.view')): ?>
+<section class="panel table-panel" data-panel="payments">
             <h2>Recent Payments</h2>
             <div class="panel-search">
                 <label class="search-label">🔍 Search:</label>
@@ -2113,8 +2400,10 @@ $liveActivity = array_slice($liveActivity, 0, 6);
             </table>
             </div>
         </section>
+<?php endif; ?>
 
-        <section class="panel table-panel" data-panel="adjustments">
+        <?php if (mitas_can('inventory.manage')): ?>
+<section class="panel table-panel" data-panel="adjustments">
             <h2>Stock Adjustments</h2>
             <div class="panel-search">
                 <label class="search-label">🔍 Search:</label>
@@ -2143,6 +2432,7 @@ $liveActivity = array_slice($liveActivity, 0, 6);
             </table>
             </div>
         </section>
+<?php endif; ?>
     <?php endif; ?>
     <script>
         const PRODUCTS = <?= json_encode($products_all, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_QUOT|JSON_HEX_APOS) ?>;

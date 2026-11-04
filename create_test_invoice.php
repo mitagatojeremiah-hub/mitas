@@ -1,4 +1,8 @@
 <?php
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit;
+}
 $dbfile = __DIR__ . '/data/mitas_system.sqlite';
 $pdo = new PDO('sqlite:'.$dbfile);
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);

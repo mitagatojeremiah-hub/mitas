@@ -4,6 +4,8 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 use Aws\S3\S3Client;
 use Aws\S3\Exception\S3Exception;
+session_start();
+require_once __DIR__ . '/auth.php';
 
 $dbFile = __DIR__ . '/data/mitas_system.sqlite';
 
@@ -13,11 +15,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-session_start();
-
-if (empty($_SESSION['user'])) {
-    http_response_code(403);
-    echo json_encode(['error' => 'Not logged in']);
+$pdo = new PDO('sqlite:' . $dbFile);
+$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+mitas_require_permission($pdo, 'backups.manage', true);
+$csrf = $_POST['csrf_token'] ?? '';
+if (!hash_equals($_SESSION['csrf_token'] ?? '', $csrf)) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Invalid CSRF']);
     exit;
 }
 

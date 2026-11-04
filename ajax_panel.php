@@ -1,9 +1,27 @@
 <?php
+session_start();
 // Lightweight AJAX endpoint to return HTML fragments for panels
 $panel = $_GET['panel'] ?? '';
 $dbFile = __DIR__ . '/data/mitas_system.sqlite';
 $pdo = new PDO('sqlite:' . $dbFile);
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+require_once __DIR__ . '/auth.php';
+$panelPermissions = [
+    'inventory_list' => 'inventory.view',
+    'customers' => 'customers.view',
+    'suppliers' => 'suppliers.view',
+    'purchases' => 'purchases.view',
+    'payments' => 'payments.view',
+    'adjustments' => 'adjustments.view',
+    'invoices' => 'invoices.view',
+    'recent_orders' => 'sales.view'
+];
+if (!isset($panelPermissions[$panel])) {
+    http_response_code(404);
+    exit('Panel not found');
+}
+mitas_require_permission($pdo, $panelPermissions[$panel], true);
+$canViewCost = mitas_can('inventory.cost.view');
 
 function esc($s){ return htmlspecialchars($s); }
 
@@ -12,9 +30,9 @@ switch($panel){
     case 'inventory_list':
         $rows = $pdo->query('SELECT name, category, quantity, buy_price, sell_price, location FROM products ORDER BY name LIMIT 200')->fetchAll(PDO::FETCH_ASSOC);
         $frag .= '<div class="panel-fragment">';
-        $frag .= '<table><thead><tr><th>Name</th><th>Category</th><th>Qty</th><th>Buy</th><th>Sell</th><th>Location</th></tr></thead><tbody>';
+        $frag .= '<table><thead><tr><th>Name</th><th>Category</th><th>Qty</th>' . ($canViewCost ? '<th>Buy</th>' : '') . '<th>Sell</th><th>Location</th></tr></thead><tbody>';
         foreach($rows as $r){
-            $frag .= '<tr><td>'.esc($r['name']).'</td><td>'.esc($r['category']).'</td><td>'.(int)$r['quantity'].'</td><td>TZS '.number_format((float)$r['buy_price'],0).'</td><td>TZS '.number_format((float)$r['sell_price'],0).'</td><td>'.esc($r['location']).'</td></tr>';
+            $frag .= '<tr><td>'.esc($r['name']).'</td><td>'.esc($r['category']).'</td><td>'.(int)$r['quantity'].'</td>' . ($canViewCost ? '<td>TZS '.number_format((float)$r['buy_price'],0).'</td>' : '') . '<td>TZS '.number_format((float)$r['sell_price'],0).'</td><td>'.esc($r['location']).'</td></tr>';
         }
         $frag .= '</tbody></table>';
         $frag .= '</div>';

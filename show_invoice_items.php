@@ -1,4 +1,8 @@
 <?php
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit;
+}
 if ($argc < 2) { echo "Usage: php show_invoice_items.php <invoice_id>\n"; exit(1);} 
 $invoiceId = (int)$argv[1];
 $pdo = new PDO('sqlite:' . __DIR__ . '/data/mitas_system.sqlite');
