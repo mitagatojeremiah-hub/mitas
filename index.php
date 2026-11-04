@@ -146,6 +146,27 @@ $translations = [
         'purchase_added' => 'Sales order saved successfully.',
         'invoice_added' => 'Invoice saved successfully.',
         'print_invoice' => 'Print Invoice',
+        'brand_tagline' => 'Inventory & invoicing',
+        'workflow_eyebrow' => 'WORKFLOW',
+        'workflow_heading' => 'Business workflow',
+        'workflow_description' => 'Follow the process from stock to a completed payment.',
+        'workflow_steps' => 'steps',
+        'workflow_open' => 'Open',
+        'workflow_stock' => 'Stock',
+        'workflow_stock_manage' => 'Add products and keep quantities accurate.',
+        'workflow_stock_view' => 'Check stock availability before a sale.',
+        'workflow_customer' => 'Customer',
+        'workflow_customer_manage' => 'Add a customer or update their details.',
+        'workflow_customer_view' => 'Review customer records.',
+        'workflow_sale' => 'Sales order',
+        'workflow_sale_manage' => 'Record the sale or order.',
+        'workflow_sale_view' => 'Review recent sales orders.',
+        'workflow_invoice' => 'Invoice',
+        'workflow_invoice_manage' => 'Create an invoice for the customer.',
+        'workflow_invoice_view' => 'Review invoices and documents.',
+        'workflow_payment' => 'Payment',
+        'workflow_payment_manage' => 'Record a payment and update the balance.',
+        'workflow_payment_view' => 'Review recorded payments.',
         'no_records' => 'No records yet.'
     ],
     'sw' => [
@@ -273,6 +294,27 @@ $translations = [
         'purchase_added' => 'Agizo la mauzo limehifadhiwa vizuri.',
         'invoice_added' => 'Ankara imehifadhiwa vizuri.',
         'print_invoice' => 'Chapisha Ankarah',
+        'brand_tagline' => 'Hifadhi, mauzo na ankara',
+        'workflow_eyebrow' => 'MCHAKATO',
+        'workflow_heading' => 'Mtiririko wa biashara',
+        'workflow_description' => 'Fuata hatua kutoka hifadhi hadi malipo kukamilika.',
+        'workflow_steps' => 'hatua',
+        'workflow_open' => 'Fungua',
+        'workflow_stock' => 'Hifadhi',
+        'workflow_stock_manage' => 'Ongeza bidhaa na hakikisha kiasi kiko sahihi.',
+        'workflow_stock_view' => 'Angalia bidhaa zilizopo kabla ya mauzo.',
+        'workflow_customer' => 'Mteja',
+        'workflow_customer_manage' => 'Ongeza mteja au sasisha taarifa zake.',
+        'workflow_customer_view' => 'Kagua taarifa za wateja.',
+        'workflow_sale' => 'Agizo la mauzo',
+        'workflow_sale_manage' => 'Rekodi mauzo au agizo.',
+        'workflow_sale_view' => 'Kagua maagizo ya hivi karibuni.',
+        'workflow_invoice' => 'Ankara',
+        'workflow_invoice_manage' => 'Tengeneza ankara ya mteja.',
+        'workflow_invoice_view' => 'Kagua ankara na nyaraka.',
+        'workflow_payment' => 'Malipo',
+        'workflow_payment_manage' => 'Rekodi malipo na sasisha salio.',
+        'workflow_payment_view' => 'Kagua malipo yaliyorekodiwa.',
         'no_records' => 'Hakuna rekodi bado.'
     ]
 ];
@@ -1493,6 +1535,103 @@ if ($loggedIn && mitas_can('users.manage')) {
         <canvas id="stockChartCanvas" width="860" height="300"></canvas>
     </section>
 
+    <?php
+    $workflowSteps = [];
+    if (mitas_can('inventory.view')) {
+        $canManageInventory = mitas_can('inventory.manage');
+        $workflowSteps[] = [
+            'target' => $canManageInventory ? 'add_product' : 'inventory_list',
+            'title' => $labels['workflow_stock'],
+            'description' => $labels[$canManageInventory ? 'workflow_stock_manage' : 'workflow_stock_view']
+        ];
+    }
+    if (mitas_can('customers.manage')) {
+        $workflowSteps[] = [
+            'target' => 'add_customer',
+            'title' => $labels['workflow_customer'],
+            'description' => $labels['workflow_customer_manage']
+        ];
+    } elseif (mitas_can('customers.view')) {
+        $workflowSteps[] = [
+            'target' => 'customers',
+            'title' => $labels['workflow_customer'],
+            'description' => $labels['workflow_customer_view']
+        ];
+    }
+    if (mitas_can('sales.manage')) {
+        $workflowSteps[] = [
+            'target' => 'create_purchase',
+            'title' => $labels['workflow_sale'],
+            'description' => $labels['workflow_sale_manage']
+        ];
+    } elseif (mitas_can('purchases.view')) {
+        $workflowSteps[] = [
+            'target' => 'purchases',
+            'title' => $labels['workflow_sale'],
+            'description' => $labels['workflow_sale_view']
+        ];
+    }
+    if (mitas_can('invoices.manage')) {
+        $workflowSteps[] = [
+            'target' => 'create_invoice',
+            'title' => $labels['workflow_invoice'],
+            'description' => $labels['workflow_invoice_manage']
+        ];
+    } elseif (mitas_can('invoices.view')) {
+        $workflowSteps[] = [
+            'target' => 'document_queue',
+            'title' => $labels['workflow_invoice'],
+            'description' => $labels['workflow_invoice_view']
+        ];
+    }
+    if (mitas_can('payments.manage')) {
+        $workflowSteps[] = [
+            'target' => 'record_payment',
+            'title' => $labels['workflow_payment'],
+            'description' => $labels['workflow_payment_manage']
+        ];
+    } elseif (mitas_can('payments.view')) {
+        $workflowSteps[] = [
+            'target' => 'payments',
+            'title' => $labels['workflow_payment'],
+            'description' => $labels['workflow_payment_view']
+        ];
+    }
+    ?>
+    <?php if (!empty($workflowSteps)): ?>
+    <section class="workflow-panel" aria-labelledby="workflow-heading">
+        <div class="workflow-heading">
+            <div>
+                <p class="eyebrow"><?= htmlspecialchars($labels['workflow_eyebrow']) ?></p>
+                <h2 id="workflow-heading"><?= htmlspecialchars($labels['workflow_heading']) ?></h2>
+                <p><?= htmlspecialchars($labels['workflow_description']) ?></p>
+            </div>
+            <span class="workflow-count">
+                <strong><?= count($workflowSteps) ?></strong>
+                <span><?= htmlspecialchars($labels['workflow_steps']) ?></span>
+            </span>
+        </div>
+        <ol class="workflow-track">
+            <?php foreach ($workflowSteps as $stepIndex => $step): ?>
+            <li class="workflow-step">
+                <a class="workflow-link" href="#app-main" data-workflow-target="<?= htmlspecialchars($step['target']) ?>">
+                    <span class="workflow-number" aria-hidden="true"><?= sprintf('%02d', $stepIndex + 1) ?></span>
+                    <span class="workflow-step-title"><?= htmlspecialchars($step['title']) ?></span>
+                    <span class="workflow-step-description"><?= htmlspecialchars($step['description']) ?></span>
+                    <span class="workflow-step-action">
+                        <?= htmlspecialchars($labels['workflow_open']) ?>
+                        <span aria-hidden="true">↗</span>
+                    </span>
+                </a>
+                <?php if ($stepIndex < count($workflowSteps) - 1): ?>
+                    <span class="workflow-connector" aria-hidden="true">→</span>
+                <?php endif; ?>
+            </li>
+            <?php endforeach; ?>
+        </ol>
+    </section>
+    <?php endif; ?>
+
     <?php endif; ?>
 
     <?php if (!empty($_SESSION['flash'])): ?>
@@ -1503,6 +1642,13 @@ if ($loggedIn && mitas_can('users.manage')) {
     <?php if (!$loggedIn): ?>
         <main class="login-wrap" id="login-main">
             <section class="panel login-panel role-form-panel" data-panel="login">
+                <div class="login-brand">
+                    <img src="logo.svg" alt="" width="52" height="52">
+                    <div class="login-brand-copy">
+                        <p class="login-brand-tagline"><?= htmlspecialchars($labels['brand_tagline']) ?></p>
+                        <p class="login-brand-name"><?= htmlspecialchars($labels['site_title']) ?></p>
+                    </div>
+                </div>
                 <h2><?= htmlspecialchars($labels['login_title']) ?></h2>
                 <p class="login-intro"><?= htmlspecialchars($labels['welcome']) ?></p>
                 <div class="panel-body">
@@ -3000,5 +3146,35 @@ if ($loggedIn && mitas_can('users.manage')) {
 
     })();
     </script>
+<script>
+document.addEventListener('click', function (event) {
+    var trigger = event.target.closest('[data-workflow-target]');
+    if (!trigger) return;
+
+    var panelName = trigger.getAttribute('data-workflow-target');
+    var panels = document.querySelectorAll('[data-panel]');
+    var panel = Array.prototype.find.call(panels, function (candidate) {
+        return candidate.getAttribute('data-panel') === panelName;
+    });
+    if (!panel) return;
+
+    event.preventDefault();
+    panel.classList.remove('hidden-panel');
+    panel.setAttribute('tabindex', '-1');
+    panel.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'start'
+    });
+
+    var heading = panel.querySelector('h2');
+    var focusTarget = heading || panel;
+    focusTarget.setAttribute('tabindex', '-1');
+    focusTarget.focus({ preventScroll: true });
+    panel.classList.add('workflow-highlight');
+    window.setTimeout(function () {
+        panel.classList.remove('workflow-highlight');
+    }, 1600);
+});
+</script>
 </body>
 </html>
