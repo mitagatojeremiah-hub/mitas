@@ -1,8 +1,10 @@
 <?php
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
+mitas_start_session();
 header('Content-Type: application/json; charset=utf-8');
 $dbFile = __DIR__ . '/data/mitas_system.sqlite';
-$pdo = new PDO('sqlite:' . $dbFile);
+require_once __DIR__ . '/db.php';
+$pdo = mitas_db();
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
 require_once __DIR__ . '/auth.php';

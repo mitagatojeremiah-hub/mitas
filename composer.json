@@ -1,6 +1,6 @@
 {
   "name": "mitas/business-online-hub",
-  "description": "Mitas Business Online Hub PHP + SQLite app",
+  "description": "Mitas business system with SQLite for local use and PostgreSQL for deployment",
   "type": "project",
   "require": {
     "aws/aws-sdk-php": "^3.272"

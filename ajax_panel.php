@@ -1,9 +1,11 @@
 <?php
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
+mitas_start_session();
 // Lightweight AJAX endpoint to return HTML fragments for panels
 $panel = $_GET['panel'] ?? '';
 $dbFile = __DIR__ . '/data/mitas_system.sqlite';
-$pdo = new PDO('sqlite:' . $dbFile);
+require_once __DIR__ . '/db.php';
+$pdo = mitas_db();
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 require_once __DIR__ . '/auth.php';
 $panelPermissions = [

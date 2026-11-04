@@ -1,12 +1,6 @@
 <?php
-// Security: enforce secure cookie flags when available
-if ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO']==='https')) {
-    ini_set('session.cookie_secure', 1);
-}
-ini_set('session.cookie_httponly', 1);
-ini_set('session.use_strict_mode', 1);
-ini_set('session.cookie_samesite', 'Lax');
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
+mitas_start_session();
 require_once __DIR__ . '/auth.php';
 
 // CSRF token
@@ -22,8 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $dbFile = __DIR__ . '/data/mitas_system.sqlite';
-if (!is_dir(__DIR__ . '/data')) {
-    mkdir(__DIR__ . '/data', 0777, true);
+if (getenv('DATABASE_URL') === false && !is_dir(__DIR__ . '/data')) {
+    mkdir(__DIR__ . '/data', 0775, true);
 }
 
 $translations = [
@@ -31,7 +25,35 @@ $translations = [
         'site_title' => 'Mitas Online Business System',
         'welcome' => 'Welcome to the online business system',
         'subtitle' => 'Manage inventory, customers, sales, and invoices from any browser.',
-        'login_title' => 'Secure Login',
+        'login_title' => 'Sign in',
+        'forgot_password' => 'Forgot password?',
+        'change_password' => 'Change password',
+        'current_password' => 'Current password',
+        'new_password' => 'New password (12+ characters with upper, lower, number, and symbol)',
+        'confirm_password' => 'Confirm new password',
+        'generate_password' => 'Generate strong password',
+        'show_password' => 'Show',
+        'hide_password' => 'Hide',
+        'password_updated' => 'Password changed successfully.',
+        'password_current_invalid' => 'Current password is incorrect.',
+        'passwords_do_not_match' => 'The new passwords do not match.',
+        'email_address' => 'Email address',
+        'email_verified' => 'Verified',
+        'email_not_verified' => 'Not verified',
+        'email_send_unavailable' => 'The account was saved, but email could not be sent. Check the Resend settings.',
+        'email_verification_sent' => 'A verification link was sent to the account email.',
+        'reset_request_sent' => 'If that username has an active account with a verified email, a reset link has been sent.',
+        'email_reset_title' => 'Reset your password',
+        'email_verify_title' => 'Verify your email',
+        'email_reset_sent' => 'If the username has an active account with a verified email, reset instructions have been sent.',
+        'email_verify_done' => 'Email address verified. You can now use it for password recovery.',
+        'email_verify_invalid' => 'This verification link is invalid or expired.',
+        'reset_token_invalid' => 'This password reset link is invalid or expired.',
+        'email_reset_success' => 'Your password has been reset. You can now sign in.',
+        'verify_email_action' => 'Verify email address',
+        'reset_password_action' => 'Set new password',
+        'password_change_required' => 'Change your temporary password before continuing.',
+        'back_to_sign_in' => 'Back to sign in',
         'login_choose_title' => 'Choose your sign-in',
         'login_choose_description' => 'Select the sign-in page assigned to your account.',
         'login_admin_title' => 'Administrator sign-in',
@@ -130,7 +152,6 @@ $translations = [
         'status' => 'Status',
         'notes' => 'Notes',
         'created' => 'Created',
-        'default_login' => 'Default login: admin / admin123',
         'product_added' => 'Product saved successfully.',
         'payment_added' => 'Payment recorded successfully.',
         'adjustment_applied' => 'Stock adjusted successfully.',
@@ -146,7 +167,35 @@ $translations = [
         'site_title' => 'Mfumo wa Biashara wa Mitas Mtandaoni',
         'welcome' => 'Karibu kwenye mfumo wa biashara mtandaoni',
         'subtitle' => 'Dhibiti hesabu, wateja, mauzo, na ankara kutoka kivinjari chochote.',
-        'login_title' => 'Kuingia Salama',
+        'login_title' => 'Ingia',
+        'forgot_password' => 'Umesahau nenosiri?',
+        'change_password' => 'Badilisha nenosiri',
+        'current_password' => 'Nenosiri la sasa',
+        'new_password' => 'Nenosiri jipya (herufi 12+, kubwa, ndogo, namba na alama)',
+        'confirm_password' => 'Thibitisha nenosiri jipya',
+        'generate_password' => 'Tengeneza nenosiri imara',
+        'show_password' => 'Onyesha',
+        'hide_password' => 'Ficha',
+        'password_updated' => 'Nenosiri limebadilishwa.',
+        'password_current_invalid' => 'Nenosiri la sasa si sahihi.',
+        'passwords_do_not_match' => 'Nenosiri jipya halilingani.',
+        'email_address' => 'Anwani ya barua pepe',
+        'email_verified' => 'Imethibitishwa',
+        'email_not_verified' => 'Haijathibitishwa',
+        'email_send_unavailable' => 'Akaunti imehifadhiwa, lakini barua pepe haikutumwa. Kagua mipangilio ya Resend.',
+        'email_verification_sent' => 'Kiungo cha uthibitisho kimetumwa kwa barua pepe ya akaunti.',
+        'reset_request_sent' => 'Ikiwa jina hilo lina akaunti inayotumika yenye barua pepe iliyothibitishwa, kiungo cha kuweka upya kimetumwa.',
+        'email_reset_title' => 'Weka upya nenosiri',
+        'email_verify_title' => 'Thibitisha barua pepe',
+        'email_reset_sent' => 'Ikiwa jina hilo lina akaunti inayotumika yenye barua pepe iliyothibitishwa, maelekezo yametumwa.',
+        'email_verify_done' => 'Barua pepe imethibitishwa. Sasa inaweza kutumika kurejesha nenosiri.',
+        'email_verify_invalid' => 'Kiungo hiki cha uthibitisho si sahihi au muda wake umeisha.',
+        'reset_token_invalid' => 'Kiungo hiki cha kuweka upya si sahihi au muda wake umeisha.',
+        'email_reset_success' => 'Nenosiri limewekwa upya. Sasa unaweza kuingia.',
+        'verify_email_action' => 'Thibitisha barua pepe',
+        'reset_password_action' => 'Weka nenosiri jipya',
+        'password_change_required' => 'Badilisha nenosiri la muda kabla ya kuendelea.',
+        'back_to_sign_in' => 'Rudi kuingia',
         'login_choose_title' => 'Chagua ukurasa wa kuingia',
         'login_choose_description' => 'Chagua ukurasa wa kuingia uliotengewa akaunti yako.',
         'login_admin_title' => 'Kuingia kwa msimamizi',
@@ -245,7 +294,6 @@ $translations = [
         'status' => 'Hali',
         'notes' => 'Maelezo',
         'created' => 'Iliundwa',
-        'default_login' => 'Ingia kwa: admin / admin123',
         'product_added' => 'Bidhaa imehifadhiwa vizuri.',
         'payment_added' => 'Malipo yameandikwa kwa mafanikio.',
         'adjustment_applied' => 'Hali ya hisa imesasishwa kwa mafanikio.',
@@ -275,13 +323,9 @@ $loginRoles = [
     'staff' => ['label' => $labels['role_staff'], 'title' => $labels['login_staff_title'], 'description' => $labels['login_staff_description']],
     'manager' => ['label' => $labels['role_manager'], 'title' => $labels['login_manager_title'], 'description' => $labels['login_manager_description']],
 ];
-$loginRoleValue = $_POST['login_role'] ?? $_GET['role'] ?? '';
-$loginRole = is_string($loginRoleValue) ? strtolower(trim($loginRoleValue)) : '';
-if (!array_key_exists($loginRole, $loginRoles)) {
-    $loginRole = '';
-}
 
-$pdo = new PDO('sqlite:' . $dbFile);
+require_once __DIR__ . '/db.php';
+$pdo = mitas_db();
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 // Improve concurrency for SQLite: use WAL and set busy timeout
 try {
@@ -574,8 +618,20 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS company_profile (
 
 $userCount = (int)$pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
 if ($userCount === 0) {
-    $stmt = $pdo->prepare('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)');
-    $stmt->execute(['admin', password_hash('admin123', PASSWORD_DEFAULT), 'admin']);
+    $initialAdminPassword = (string)getenv('MITAS_INITIAL_ADMIN_PASSWORD');
+    $initialAdminEmail = trim((string)getenv('MITAS_INITIAL_ADMIN_EMAIL'));
+    if (!mitas_password_is_strong($initialAdminPassword)) {
+        throw new RuntimeException('Set MITAS_INITIAL_ADMIN_PASSWORD to a strong 12+ character value before the first Mitas request.');
+    }
+    if ($initialAdminEmail !== '' && !filter_var($initialAdminEmail, FILTER_VALIDATE_EMAIL)) {
+        throw new RuntimeException('MITAS_INITIAL_ADMIN_EMAIL must be a valid email address when provided.');
+    }
+    $stmt = $pdo->prepare('INSERT INTO users (username, password_hash, role, is_active, email, email_verified_at, session_version, must_change_password) VALUES (?, ?, ?, 1, ?, NULL, 0, 1)');
+    $stmt->execute(['admin', password_hash($initialAdminPassword, PASSWORD_DEFAULT), 'admin', $initialAdminEmail !== '' ? $initialAdminEmail : null]);
+    if ($initialAdminEmail !== '') {
+        $verificationToken = mitas_issue_email_token($pdo, (int)$pdo->lastInsertId(), $initialAdminEmail, 'verify_email');
+        mitas_send_account_email($initialAdminEmail, $verificationToken, 'verify_email');
+    }
 }
 
 $companyProfile = $pdo->query('SELECT * FROM company_profile ORDER BY id DESC LIMIT 1')->fetch(PDO::FETCH_ASSOC);
@@ -586,6 +642,10 @@ if (!$companyProfile) {
 
 $currentUser = mitas_current_user($pdo);
 $loggedIn = $currentUser !== null;
+if ($loggedIn && !empty($_SESSION['must_change_password']) && !isset($_POST['logout'])) {
+    header('Location: change_password.php?required=1');
+    exit;
+}
 if (isset($_POST['login_submit']) && $csrf_ok) {
     $username = trim($_POST['username'] ?? '');
     $password = (string)($_POST['password'] ?? '');
@@ -598,13 +658,10 @@ if (isset($_POST['login_submit']) && $csrf_ok) {
         $_SESSION['flash'] = 'Too many failed login attempts. Try again later.';
         audit_log($pdo, 'login_blocked', $username, 'Too many attempts from ' . ($ip ?? 'unknown'));
     } else {
-        $submittedRoleValue = $_POST['login_role'] ?? '';
-        $submittedRole = is_string($submittedRoleValue) ? strtolower(trim($submittedRoleValue)) : '';
-        if (array_key_exists($submittedRole, $loginRoles)) {
-            $stmt = $pdo->prepare('SELECT id, password_hash, role FROM users WHERE username = ? AND LOWER(TRIM(role)) = ? AND is_active = 1');
-            $stmt->execute([$username, $submittedRole]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        } else {
+        $stmt = $pdo->prepare('SELECT id, password_hash, LOWER(TRIM(role)) AS role, session_version, must_change_password FROM users WHERE username = ? AND is_active = 1');
+        $stmt->execute([$username]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($user && !array_key_exists($user['role'], $loginRoles)) {
             $user = false;
         }
         $success = 0;
@@ -614,10 +671,16 @@ if (isset($_POST['login_submit']) && $csrf_ok) {
             $csrf_token = $_SESSION['csrf_token'];
             $_SESSION['user_id'] = (int)$user['id'];
             $_SESSION['username'] = $username;
-            $_SESSION['user_role'] = strtolower(trim($user['role']));
+            $_SESSION['user_role'] = $user['role'];
+            $_SESSION['user_session_version'] = (int)$user['session_version'];
+            $_SESSION['must_change_password'] = (int)$user['must_change_password'];
             $loggedIn = true;
             $success = 1;
             audit_log($pdo, 'login_success', $username, 'Logged in from ' . ($ip ?? 'unknown'));
+            if (!empty($user['must_change_password'])) {
+                header('Location: change_password.php?required=1');
+                exit;
+            }
         } else {
             $_SESSION['flash'] = 'Invalid username or password.';
             audit_log($pdo, 'login_failed', $username, 'Failed login from ' . ($ip ?? 'unknown'));
@@ -663,18 +726,22 @@ if ($loggedIn) {
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user']) && $csrf_ok) {
             $newUsername = trim((string)($_POST['new_username'] ?? ''));
+            $newEmail = trim((string)($_POST['new_email'] ?? ''));
             $newPassword = (string)($_POST['new_password'] ?? '');
             $newRole = strtolower(trim((string)($_POST['new_role'] ?? '')));
-            if ($newUsername === '' || strlen($newUsername) > 64 || !array_key_exists($newRole, $loginRoles)) {
+            if ($newUsername === '' || strlen($newUsername) > 64 || !array_key_exists($newRole, $loginRoles) || !filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
                 $_SESSION['flash'] = $labels['account_invalid'];
-            } elseif (strlen($newPassword) < 12) {
+            } elseif (!mitas_password_is_strong($newPassword)) {
                 $_SESSION['flash'] = $labels['password_too_short'];
             } else {
                 try {
-                    $stmt = $pdo->prepare('INSERT INTO users (username, password_hash, role, is_active) VALUES (?, ?, ?, 1)');
-                    $stmt->execute([$newUsername, password_hash($newPassword, PASSWORD_DEFAULT), $newRole]);
+                    $stmt = $pdo->prepare('INSERT INTO users (username, password_hash, role, is_active, email, email_verified_at, must_change_password) VALUES (?, ?, ?, 1, ?, NULL, 1)');
+                    $stmt->execute([$newUsername, password_hash($newPassword, PASSWORD_DEFAULT), $newRole, $newEmail]);
+                    $newUserId = (int)$pdo->lastInsertId();
+                    $verificationToken = mitas_issue_email_token($pdo, $newUserId, $newEmail, 'verify_email');
+                    $emailSent = mitas_send_account_email($newEmail, $verificationToken, 'verify_email');
                     audit_log($pdo, 'user_created', $_SESSION['username'] ?? null, $newUsername . ' (' . $newRole . ')');
-                    $_SESSION['flash'] = $labels['account_created'];
+                    $_SESSION['flash'] = $labels['account_created'] . ' ' . $labels[$emailSent ? 'email_verification_sent' : 'email_send_unavailable'];
                 } catch (PDOException $e) {
                     $_SESSION['flash'] = $labels['account_exists'];
                 }
@@ -685,14 +752,15 @@ if ($loggedIn) {
             $targetId = (int)($_POST['user_id'] ?? 0);
             $targetRole = strtolower(trim((string)($_POST['account_role'] ?? '')));
             $targetActive = (($_POST['account_active'] ?? '0') === '1') ? 1 : 0;
+            $targetEmail = trim((string)($_POST['account_email'] ?? ''));
             $resetPassword = (string)($_POST['reset_password'] ?? '');
-            $stmt = $pdo->prepare('SELECT id, username, LOWER(TRIM(role)) AS role, is_active FROM users WHERE id = ?');
+            $stmt = $pdo->prepare('SELECT id, username, LOWER(TRIM(role)) AS role, is_active, email, email_verified_at, session_version FROM users WHERE id = ?');
             $stmt->execute([$targetId]);
             $targetUser = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if (!$targetUser || !array_key_exists($targetRole, $loginRoles)) {
+            if (!$targetUser || !array_key_exists($targetRole, $loginRoles) || ($targetEmail !== '' && !filter_var($targetEmail, FILTER_VALIDATE_EMAIL))) {
                 $_SESSION['flash'] = $labels['account_invalid'];
-            } elseif ($resetPassword !== '' && strlen($resetPassword) < 12) {
+            } elseif ($resetPassword !== '' && !mitas_password_is_strong($resetPassword)) {
                 $_SESSION['flash'] = $labels['password_too_short'];
             } elseif ($targetId === (int)$_SESSION['user_id'] && ($targetRole !== 'admin' || $targetActive !== 1)) {
                 $_SESSION['flash'] = $labels['account_self_lockout'];
@@ -704,14 +772,35 @@ if ($loggedIn) {
                 if ($removesAdmin && $activeAdminCount <= 1) {
                     $_SESSION['flash'] = $labels['last_admin_required'];
                 } else {
-                    $stmt = $pdo->prepare('UPDATE users SET role = ?, is_active = ? WHERE id = ?');
-                    $stmt->execute([$targetRole, $targetActive, $targetId]);
-                    if ($resetPassword !== '') {
-                        $stmt = $pdo->prepare('UPDATE users SET password_hash = ? WHERE id = ?');
-                        $stmt->execute([password_hash($resetPassword, PASSWORD_DEFAULT), $targetId]);
+                    $emailChanged = $targetEmail !== (string)($targetUser['email'] ?? '');
+                    $verifiedAt = $emailChanged ? null : ($targetUser['email_verified_at'] ?? null);
+                    $stmt = $pdo->prepare('UPDATE users SET role = ?, is_active = ?, email = ?, email_verified_at = ? WHERE id = ?');
+                    $stmt->execute([$targetRole, $targetActive, $targetEmail !== '' ? $targetEmail : null, $verifiedAt, $targetId]);
+                    if ($emailChanged) {
+                        $invalidate = $pdo->prepare("UPDATE account_email_tokens SET consumed_at = ? WHERE user_id = ? AND purpose = 'verify_email' AND consumed_at IS NULL");
+                        $invalidate->execute([date('Y-m-d H:i:s'), $targetId]);
                     }
+
+                    if ($resetPassword !== '') {
+                        $stmt = $pdo->prepare('UPDATE users SET password_hash = ?, session_version = session_version + 1, must_change_password = 1 WHERE id = ?');
+                        $stmt->execute([password_hash($resetPassword, PASSWORD_DEFAULT), $targetId]);
+                        if ($targetId === (int)$_SESSION['user_id']) {
+                            $_SESSION['user_session_version'] = (int)$targetUser['session_version'] + 1;
+                            $_SESSION['must_change_password'] = 1;
+                        }
+                    }
+
+                    $verificationSent = null;
+                    if ($targetEmail !== '' && ($emailChanged || empty($targetUser['email_verified_at']))) {
+                        $verificationToken = mitas_issue_email_token($pdo, $targetId, $targetEmail, 'verify_email');
+                        $verificationSent = mitas_send_account_email($targetEmail, $verificationToken, 'verify_email');
+                    }
+
                     audit_log($pdo, 'user_updated', $_SESSION['username'] ?? null, $targetUser['username'] . ' (' . $targetRole . ')');
                     $_SESSION['flash'] = $labels['account_updated'];
+                    if ($verificationSent !== null) {
+                        $_SESSION['flash'] .= ' ' . $labels[$verificationSent ? 'email_verification_sent' : 'email_send_unavailable'];
+                    }
                 }
             }
         }
@@ -1351,12 +1440,8 @@ usort($liveActivity, function ($a, $b) { return strcmp($b['time'], $a['time']); 
 $liveActivity = array_slice($liveActivity, 0, 6);
 $managedUsers = [];
 if ($loggedIn && mitas_can('users.manage')) {
-    $managedUsers = $pdo->query('SELECT id, username, LOWER(TRIM(role)) AS role, is_active FROM users ORDER BY username')->fetchAll(PDO::FETCH_ASSOC);
+    $managedUsers = $pdo->query('SELECT id, username, LOWER(TRIM(role)) AS role, is_active, email, email_verified_at, session_version FROM users ORDER BY username')->fetchAll(PDO::FETCH_ASSOC);
 }
-$defaultAdminStmt = $pdo->prepare("SELECT password_hash FROM users WHERE username = 'admin' AND LOWER(TRIM(role)) = 'admin' AND is_active = 1 LIMIT 1");
-$defaultAdminStmt->execute();
-$defaultAdminHash = $defaultAdminStmt->fetchColumn();
-$showDefaultLogin = is_string($defaultAdminHash) && password_verify('admin123', $defaultAdminHash);
 ?>
 <!DOCTYPE html>
 <html lang="<?= htmlspecialchars($language) ?>">
@@ -1475,39 +1560,20 @@ $showDefaultLogin = is_string($defaultAdminHash) && password_verify('admin123', 
 
     <?php if (!$loggedIn): ?>
         <main class="login-wrap" id="login-main">
-            <section class="panel login-panel <?= $loginRole === '' ? 'role-picker-panel' : 'role-form-panel' ?>" data-panel="login">
-                <?php if ($loginRole === ''): ?>
-                    <h2><?= htmlspecialchars($labels['login_choose_title']) ?></h2>
-                    <p class="login-intro"><?= htmlspecialchars($labels['login_choose_description']) ?></p>
-                    <div class="login-role-grid">
-                        <?php foreach ($loginRoles as $roleKey => $role): ?>
-                            <a class="login-role-card" href="?role=<?= rawurlencode($roleKey) ?>">
-                                <span class="login-role-icon" aria-hidden="true"><?= htmlspecialchars(strtoupper(substr($roleKey, 0, 1))) ?></span>
-                                <span class="login-role-title"><?= htmlspecialchars($role['label']) ?></span>
-                                <span class="login-role-description"><?= htmlspecialchars($role['description']) ?></span>
-                                <span class="login-role-action"><?= htmlspecialchars($labels['continue_to_login']) ?> <span aria-hidden="true">→</span></span>
-                            </a>
-                        <?php endforeach; ?>
-                    </div>
-                <?php else: ?>
-                    <a class="login-role-back" href="index.php">← <?= htmlspecialchars($labels['back_to_roles']) ?></a>
-                    <h2><?= htmlspecialchars($loginRoles[$loginRole]['title']) ?></h2>
-                    <p class="login-intro"><?= htmlspecialchars($loginRoles[$loginRole]['description']) ?></p>
-                    <div class="panel-body">
-                        <form method="post" class="stacked-form">
-                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
-                            <input type="hidden" name="login_role" value="<?= htmlspecialchars($loginRole) ?>">
-                            <label for="loginUsername"><?= htmlspecialchars($labels['username']) ?></label>
-                            <input id="loginUsername" type="text" name="username" autocomplete="username" placeholder="<?= htmlspecialchars($labels['username']) ?>" required>
-                            <label for="loginPassword"><?= htmlspecialchars($labels['password']) ?></label>
-                            <input id="loginPassword" type="password" name="password" autocomplete="current-password" placeholder="<?= htmlspecialchars($labels['password']) ?>" required>
-                            <button type="submit" name="login_submit" value="1"><?= htmlspecialchars($labels['login']) ?></button>
-                        </form>
-                        <?php if ($loginRole === 'admin' && $showDefaultLogin): ?>
-                            <p class="hint"><?= htmlspecialchars($labels['default_login']) ?></p>
-                        <?php endif; ?>
-                    </div>
-                <?php endif; ?>
+            <section class="panel login-panel role-form-panel" data-panel="login">
+                <h2><?= htmlspecialchars($labels['login_title']) ?></h2>
+                <p class="login-intro"><?= htmlspecialchars($labels['welcome']) ?></p>
+                <div class="panel-body">
+                    <form method="post" class="stacked-form">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                        <label for="loginUsername"><?= htmlspecialchars($labels['username']) ?></label>
+                        <input id="loginUsername" type="text" name="username" autocomplete="username" placeholder="<?= htmlspecialchars($labels['username']) ?>" required>
+                        <label for="loginPassword"><?= htmlspecialchars($labels['password']) ?></label>
+                        <input id="loginPassword" type="password" name="password" autocomplete="current-password" placeholder="<?= htmlspecialchars($labels['password']) ?>" required>
+                        <button type="submit" name="login_submit" value="1"><?= htmlspecialchars($labels['login']) ?></button>
+                    </form>
+                    <p class="forgot-password-link"><a href="password_recovery.php"><?= htmlspecialchars($labels['forgot_password']) ?></a></p>
+                </div>
             </section>
         </main>
     <?php else: ?>
@@ -1516,6 +1582,7 @@ $showDefaultLogin = is_string($defaultAdminHash) && password_verify('admin123', 
                 <strong><?= htmlspecialchars($labels['welcome']) ?>, <?= htmlspecialchars($_SESSION['username'] ?? 'Admin') ?></strong>
             </div>
             <div class="toolbar-right">
+                <a class="glow-btn" href="change_password.php"><?= htmlspecialchars($labels['change_password']) ?></a>
                 <button type="button" id="helpToggleBtn" class="glow-btn" title="System Help">? Help</button>
                 <button type="button" id="languageToggleBtn" class="glow-btn">
                     <?= htmlspecialchars($language === 'en' ? 'Switch to ' . $labels['swahili'] : 'Switch to ' . $labels['english']) ?>
@@ -1550,6 +1617,7 @@ $showDefaultLogin = is_string($defaultAdminHash) && password_verify('admin123', 
                 </div>
             </div>
         </div>
+    <script src="password-tools.js" defer></script>
     <script>
         // Add help button handler
         document.getElementById('helpToggleBtn')?.addEventListener('click', function(){
@@ -1718,6 +1786,8 @@ $showDefaultLogin = is_string($defaultAdminHash) && password_verify('admin123', 
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                         <label for="newUsername"><?= htmlspecialchars($labels['username']) ?></label>
                         <input id="newUsername" type="text" name="new_username" autocomplete="off" maxlength="64" required>
+                        <label for="newUserEmail"><?= htmlspecialchars($labels['email_address']) ?></label>
+                        <input id="newUserEmail" type="email" name="new_email" autocomplete="email" required>
                         <label for="newUserRole"><?= htmlspecialchars($labels['account_role']) ?></label>
                         <select id="newUserRole" name="new_role" required>
                             <?php foreach ($loginRoles as $roleKey => $role): ?>
@@ -1726,9 +1796,14 @@ $showDefaultLogin = is_string($defaultAdminHash) && password_verify('admin123', 
                         </select>
                         <label for="newUserPassword"><?= htmlspecialchars($labels['new_account_password']) ?></label>
                         <input id="newUserPassword" type="password" name="new_password" autocomplete="new-password" minlength="12" required>
+                        <div class="password-tools">
+                            <button type="button" data-generate-password="newUserPassword"><?= htmlspecialchars($labels['generate_password']) ?></button>
+                            <button type="button" data-toggle-password="newUserPassword" aria-pressed="false"><?= htmlspecialchars($labels['show_password']) ?></button>
+                        </div>
                         <button type="submit" name="create_user" value="1"><?= htmlspecialchars($labels['save_new_account']) ?></button>
                     </form>
 
+                    <p id="passwordToolStatus" class="sr-only" aria-live="polite"></p>
                     <div class="account-list">
                         <?php foreach ($managedUsers as $managedUser): ?>
                             <?php $accountFormId = 'account-' . (int)$managedUser['id']; ?>
@@ -1739,6 +1814,9 @@ $showDefaultLogin = is_string($defaultAdminHash) && password_verify('admin123', 
                                     <strong><?= htmlspecialchars($managedUser['username']) ?></strong>
                                     <span class="account-status"><?= (int)$managedUser['is_active'] === 1 ? htmlspecialchars($labels['active']) : htmlspecialchars($labels['inactive']) ?></span>
                                 </div>
+                                <label for="<?= $accountFormId ?>-email"><?= htmlspecialchars($labels['email_address']) ?></label>
+                                <input id="<?= $accountFormId ?>-email" type="email" name="account_email" autocomplete="email" value="<?= htmlspecialchars($managedUser['email'] ?? '') ?>">
+                                <p class="account-email-state"><?= !empty($managedUser['email_verified_at']) ? htmlspecialchars($labels['email_verified']) : htmlspecialchars($labels['email_not_verified']) ?></p>
                                 <label for="<?= $accountFormId ?>-role"><?= htmlspecialchars($labels['account_role']) ?></label>
                                 <select id="<?= $accountFormId ?>-role" name="account_role" required>
                                     <?php foreach ($loginRoles as $roleKey => $role): ?>
@@ -1752,6 +1830,10 @@ $showDefaultLogin = is_string($defaultAdminHash) && password_verify('admin123', 
                                 </select>
                                 <label for="<?= $accountFormId ?>-password"><?= htmlspecialchars($labels['reset_password']) ?></label>
                                 <input id="<?= $accountFormId ?>-password" type="password" name="reset_password" autocomplete="new-password" minlength="12">
+                                <div class="password-tools">
+                                    <button type="button" data-generate-password="<?= $accountFormId ?>-password"><?= htmlspecialchars($labels['generate_password']) ?></button>
+                                    <button type="button" data-toggle-password="<?= $accountFormId ?>-password" aria-pressed="false"><?= htmlspecialchars($labels['show_password']) ?></button>
+                                </div>
                                 <button type="submit" name="update_user" value="1"><?= htmlspecialchars($labels['save_account']) ?></button>
                             </form>
                         <?php endforeach; ?>
