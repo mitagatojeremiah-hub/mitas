@@ -37,21 +37,6 @@ $translations = [
         'password_updated' => 'Password changed successfully.',
         'password_current_invalid' => 'Current password is incorrect.',
         'passwords_do_not_match' => 'The new passwords do not match.',
-        'email_address' => 'Email address',
-        'email_verified' => 'Verified',
-        'email_not_verified' => 'Not verified',
-        'email_send_unavailable' => 'The account was saved, but email could not be sent. Check the Resend settings.',
-        'email_verification_sent' => 'A verification link was sent to the account email.',
-        'reset_request_sent' => 'If that username has an active account with a verified email, a reset link has been sent.',
-        'email_reset_title' => 'Reset your password',
-        'email_verify_title' => 'Verify your email',
-        'email_reset_sent' => 'If the username has an active account with a verified email, reset instructions have been sent.',
-        'email_verify_done' => 'Email address verified. You can now use it for password recovery.',
-        'email_verify_invalid' => 'This verification link is invalid or expired.',
-        'reset_token_invalid' => 'This password reset link is invalid or expired.',
-        'email_reset_success' => 'Your password has been reset. You can now sign in.',
-        'verify_email_action' => 'Verify email address',
-        'reset_password_action' => 'Set new password',
         'password_change_required' => 'Change your temporary password before continuing.',
         'back_to_sign_in' => 'Back to sign in',
         'login_choose_title' => 'Choose your sign-in',
@@ -78,8 +63,8 @@ $translations = [
         'save_account' => 'Save account',
         'save_new_account' => 'Create account',
         'reset_password' => 'New password (leave blank to keep current)',
-        'account_created' => 'Account created successfully.',
-        'account_updated' => 'Account updated successfully.',
+        'account_created' => 'Account created. The user must change the temporary password at sign-in.',
+        'account_updated' => 'Account updated. Any temporary password must be changed at sign-in.',
         'account_exists' => 'That username is already in use.',
         'account_invalid' => 'Enter a valid username, role, and status.',
         'password_too_short' => 'Password must be at least 12 characters.',
@@ -179,21 +164,6 @@ $translations = [
         'password_updated' => 'Nenosiri limebadilishwa.',
         'password_current_invalid' => 'Nenosiri la sasa si sahihi.',
         'passwords_do_not_match' => 'Nenosiri jipya halilingani.',
-        'email_address' => 'Anwani ya barua pepe',
-        'email_verified' => 'Imethibitishwa',
-        'email_not_verified' => 'Haijathibitishwa',
-        'email_send_unavailable' => 'Akaunti imehifadhiwa, lakini barua pepe haikutumwa. Kagua mipangilio ya Resend.',
-        'email_verification_sent' => 'Kiungo cha uthibitisho kimetumwa kwa barua pepe ya akaunti.',
-        'reset_request_sent' => 'Ikiwa jina hilo lina akaunti inayotumika yenye barua pepe iliyothibitishwa, kiungo cha kuweka upya kimetumwa.',
-        'email_reset_title' => 'Weka upya nenosiri',
-        'email_verify_title' => 'Thibitisha barua pepe',
-        'email_reset_sent' => 'Ikiwa jina hilo lina akaunti inayotumika yenye barua pepe iliyothibitishwa, maelekezo yametumwa.',
-        'email_verify_done' => 'Barua pepe imethibitishwa. Sasa inaweza kutumika kurejesha nenosiri.',
-        'email_verify_invalid' => 'Kiungo hiki cha uthibitisho si sahihi au muda wake umeisha.',
-        'reset_token_invalid' => 'Kiungo hiki cha kuweka upya si sahihi au muda wake umeisha.',
-        'email_reset_success' => 'Nenosiri limewekwa upya. Sasa unaweza kuingia.',
-        'verify_email_action' => 'Thibitisha barua pepe',
-        'reset_password_action' => 'Weka nenosiri jipya',
         'password_change_required' => 'Badilisha nenosiri la muda kabla ya kuendelea.',
         'back_to_sign_in' => 'Rudi kuingia',
         'login_choose_title' => 'Chagua ukurasa wa kuingia',
@@ -220,8 +190,8 @@ $translations = [
         'save_account' => 'Hifadhi akaunti',
         'save_new_account' => 'Tengeneza akaunti',
         'reset_password' => 'Nenosiri jipya (acha wazi kuhifadhi la sasa)',
-        'account_created' => 'Akaunti imetengenezwa.',
-        'account_updated' => 'Akaunti imesasishwa.',
+        'account_created' => 'Akaunti imetengenezwa. Mtumiaji lazima abadilishe nenosiri la muda atakapoingia.',
+        'account_updated' => 'Akaunti imesasishwa. Nenosiri lolote la muda lazima libadilishwe mtumiaji anapoingia.',
         'account_exists' => 'Jina hilo la mtumiaji tayari linatumika.',
         'account_invalid' => 'Weka jina, nafasi na hali sahihi.',
         'password_too_short' => 'Nenosiri lazima liwe na herufi 12 au zaidi.',
@@ -619,19 +589,11 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS company_profile (
 $userCount = (int)$pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
 if ($userCount === 0) {
     $initialAdminPassword = (string)getenv('MITAS_INITIAL_ADMIN_PASSWORD');
-    $initialAdminEmail = trim((string)getenv('MITAS_INITIAL_ADMIN_EMAIL'));
     if (!mitas_password_is_strong($initialAdminPassword)) {
         mitas_render_setup_error('Initial Admin setup required', 'Set MITAS_INITIAL_ADMIN_PASSWORD in Vercel to a unique password with at least 12 characters, uppercase, lowercase, a number, and a symbol, then redeploy.');
     }
-    if ($initialAdminEmail !== '' && !filter_var($initialAdminEmail, FILTER_VALIDATE_EMAIL)) {
-        mitas_render_setup_error('Initial Admin email setup required', 'Remove MITAS_INITIAL_ADMIN_EMAIL or set it to a valid email address in Vercel, then redeploy.');
-    }
-    $stmt = $pdo->prepare('INSERT INTO users (username, password_hash, role, is_active, email, email_verified_at, session_version, must_change_password) VALUES (?, ?, ?, 1, ?, NULL, 0, 1)');
-    $stmt->execute(['admin', password_hash($initialAdminPassword, PASSWORD_DEFAULT), 'admin', $initialAdminEmail !== '' ? $initialAdminEmail : null]);
-    if ($initialAdminEmail !== '') {
-        $verificationToken = mitas_issue_email_token($pdo, (int)$pdo->lastInsertId(), $initialAdminEmail, 'verify_email');
-        mitas_send_account_email($initialAdminEmail, $verificationToken, 'verify_email');
-    }
+    $stmt = $pdo->prepare('INSERT INTO users (username, password_hash, role, is_active, session_version, must_change_password) VALUES (?, ?, ?, 1, 0, 1)');
+    $stmt->execute(['admin', password_hash($initialAdminPassword, PASSWORD_DEFAULT), 'admin']);
 }
 
 $companyProfile = $pdo->query('SELECT * FROM company_profile ORDER BY id DESC LIMIT 1')->fetch(PDO::FETCH_ASSOC);
@@ -726,22 +688,18 @@ if ($loggedIn) {
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user']) && $csrf_ok) {
             $newUsername = trim((string)($_POST['new_username'] ?? ''));
-            $newEmail = trim((string)($_POST['new_email'] ?? ''));
             $newPassword = (string)($_POST['new_password'] ?? '');
             $newRole = strtolower(trim((string)($_POST['new_role'] ?? '')));
-            if ($newUsername === '' || strlen($newUsername) > 64 || !array_key_exists($newRole, $loginRoles) || !filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
+            if ($newUsername === '' || strlen($newUsername) > 64 || !array_key_exists($newRole, $loginRoles)) {
                 $_SESSION['flash'] = $labels['account_invalid'];
             } elseif (!mitas_password_is_strong($newPassword)) {
                 $_SESSION['flash'] = $labels['password_too_short'];
             } else {
                 try {
-                    $stmt = $pdo->prepare('INSERT INTO users (username, password_hash, role, is_active, email, email_verified_at, must_change_password) VALUES (?, ?, ?, 1, ?, NULL, 1)');
-                    $stmt->execute([$newUsername, password_hash($newPassword, PASSWORD_DEFAULT), $newRole, $newEmail]);
-                    $newUserId = (int)$pdo->lastInsertId();
-                    $verificationToken = mitas_issue_email_token($pdo, $newUserId, $newEmail, 'verify_email');
-                    $emailSent = mitas_send_account_email($newEmail, $verificationToken, 'verify_email');
+                    $stmt = $pdo->prepare('INSERT INTO users (username, password_hash, role, is_active, must_change_password) VALUES (?, ?, ?, 1, 1)');
+                    $stmt->execute([$newUsername, password_hash($newPassword, PASSWORD_DEFAULT), $newRole]);
                     audit_log($pdo, 'user_created', $_SESSION['username'] ?? null, $newUsername . ' (' . $newRole . ')');
-                    $_SESSION['flash'] = $labels['account_created'] . ' ' . $labels[$emailSent ? 'email_verification_sent' : 'email_send_unavailable'];
+                    $_SESSION['flash'] = $labels['account_created'];
                 } catch (PDOException $e) {
                     $_SESSION['flash'] = $labels['account_exists'];
                 }
@@ -752,13 +710,12 @@ if ($loggedIn) {
             $targetId = (int)($_POST['user_id'] ?? 0);
             $targetRole = strtolower(trim((string)($_POST['account_role'] ?? '')));
             $targetActive = (($_POST['account_active'] ?? '0') === '1') ? 1 : 0;
-            $targetEmail = trim((string)($_POST['account_email'] ?? ''));
             $resetPassword = (string)($_POST['reset_password'] ?? '');
-            $stmt = $pdo->prepare('SELECT id, username, LOWER(TRIM(role)) AS role, is_active, email, email_verified_at, session_version FROM users WHERE id = ?');
+            $stmt = $pdo->prepare('SELECT id, username, LOWER(TRIM(role)) AS role, is_active, session_version FROM users WHERE id = ?');
             $stmt->execute([$targetId]);
             $targetUser = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if (!$targetUser || !array_key_exists($targetRole, $loginRoles) || ($targetEmail !== '' && !filter_var($targetEmail, FILTER_VALIDATE_EMAIL))) {
+            if (!$targetUser || !array_key_exists($targetRole, $loginRoles)) {
                 $_SESSION['flash'] = $labels['account_invalid'];
             } elseif ($resetPassword !== '' && !mitas_password_is_strong($resetPassword)) {
                 $_SESSION['flash'] = $labels['password_too_short'];
@@ -772,14 +729,8 @@ if ($loggedIn) {
                 if ($removesAdmin && $activeAdminCount <= 1) {
                     $_SESSION['flash'] = $labels['last_admin_required'];
                 } else {
-                    $emailChanged = $targetEmail !== (string)($targetUser['email'] ?? '');
-                    $verifiedAt = $emailChanged ? null : ($targetUser['email_verified_at'] ?? null);
-                    $stmt = $pdo->prepare('UPDATE users SET role = ?, is_active = ?, email = ?, email_verified_at = ? WHERE id = ?');
-                    $stmt->execute([$targetRole, $targetActive, $targetEmail !== '' ? $targetEmail : null, $verifiedAt, $targetId]);
-                    if ($emailChanged) {
-                        $invalidate = $pdo->prepare("UPDATE account_email_tokens SET consumed_at = ? WHERE user_id = ? AND purpose = 'verify_email' AND consumed_at IS NULL");
-                        $invalidate->execute([date('Y-m-d H:i:s'), $targetId]);
-                    }
+                    $stmt = $pdo->prepare('UPDATE users SET role = ?, is_active = ? WHERE id = ?');
+                    $stmt->execute([$targetRole, $targetActive, $targetId]);
 
                     if ($resetPassword !== '') {
                         $stmt = $pdo->prepare('UPDATE users SET password_hash = ?, session_version = session_version + 1, must_change_password = 1 WHERE id = ?');
@@ -790,17 +741,8 @@ if ($loggedIn) {
                         }
                     }
 
-                    $verificationSent = null;
-                    if ($targetEmail !== '' && ($emailChanged || empty($targetUser['email_verified_at']))) {
-                        $verificationToken = mitas_issue_email_token($pdo, $targetId, $targetEmail, 'verify_email');
-                        $verificationSent = mitas_send_account_email($targetEmail, $verificationToken, 'verify_email');
-                    }
-
                     audit_log($pdo, 'user_updated', $_SESSION['username'] ?? null, $targetUser['username'] . ' (' . $targetRole . ')');
                     $_SESSION['flash'] = $labels['account_updated'];
-                    if ($verificationSent !== null) {
-                        $_SESSION['flash'] .= ' ' . $labels[$verificationSent ? 'email_verification_sent' : 'email_send_unavailable'];
-                    }
                 }
             }
         }
@@ -1440,7 +1382,7 @@ usort($liveActivity, function ($a, $b) { return strcmp($b['time'], $a['time']); 
 $liveActivity = array_slice($liveActivity, 0, 6);
 $managedUsers = [];
 if ($loggedIn && mitas_can('users.manage')) {
-    $managedUsers = $pdo->query('SELECT id, username, LOWER(TRIM(role)) AS role, is_active, email, email_verified_at, session_version FROM users ORDER BY username')->fetchAll(PDO::FETCH_ASSOC);
+    $managedUsers = $pdo->query('SELECT id, username, LOWER(TRIM(role)) AS role, is_active, session_version FROM users ORDER BY username')->fetchAll(PDO::FETCH_ASSOC);
 }
 ?>
 <!DOCTYPE html>
@@ -1781,13 +1723,12 @@ if ($loggedIn && mitas_can('users.manage')) {
             <?php if (mitas_can('users.manage')): ?>
             <section class="panel account-management-panel" data-panel="account_management">
                 <h2><?= htmlspecialchars($labels['account_management']) ?></h2>
+                <p class="login-intro">Create accounts or set a strong temporary password here. The user must change it at their next sign-in.</p>
                 <div class="panel-body account-management-body">
                     <form method="post" class="stacked-form account-create-form">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                         <label for="newUsername"><?= htmlspecialchars($labels['username']) ?></label>
                         <input id="newUsername" type="text" name="new_username" autocomplete="off" maxlength="64" required>
-                        <label for="newUserEmail"><?= htmlspecialchars($labels['email_address']) ?></label>
-                        <input id="newUserEmail" type="email" name="new_email" autocomplete="email" required>
                         <label for="newUserRole"><?= htmlspecialchars($labels['account_role']) ?></label>
                         <select id="newUserRole" name="new_role" required>
                             <?php foreach ($loginRoles as $roleKey => $role): ?>
@@ -1814,9 +1755,6 @@ if ($loggedIn && mitas_can('users.manage')) {
                                     <strong><?= htmlspecialchars($managedUser['username']) ?></strong>
                                     <span class="account-status"><?= (int)$managedUser['is_active'] === 1 ? htmlspecialchars($labels['active']) : htmlspecialchars($labels['inactive']) ?></span>
                                 </div>
-                                <label for="<?= $accountFormId ?>-email"><?= htmlspecialchars($labels['email_address']) ?></label>
-                                <input id="<?= $accountFormId ?>-email" type="email" name="account_email" autocomplete="email" value="<?= htmlspecialchars($managedUser['email'] ?? '') ?>">
-                                <p class="account-email-state"><?= !empty($managedUser['email_verified_at']) ? htmlspecialchars($labels['email_verified']) : htmlspecialchars($labels['email_not_verified']) ?></p>
                                 <label for="<?= $accountFormId ?>-role"><?= htmlspecialchars($labels['account_role']) ?></label>
                                 <select id="<?= $accountFormId ?>-role" name="account_role" required>
                                     <?php foreach ($loginRoles as $roleKey => $role): ?>
