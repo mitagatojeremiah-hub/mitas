@@ -1,6 +1,11 @@
 <?php
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit;
+}
 $dbfile = __DIR__ . '/data/mitas_system.sqlite';
-$pdo = new PDO('sqlite:'.$dbfile);
+require_once __DIR__ . '/db.php';
+$pdo = mitas_db();
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $invoiceNumber = 'AUTO-' . time();
 $pdo->exec("CREATE TABLE IF NOT EXISTS invoice_items (

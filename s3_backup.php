@@ -4,8 +4,9 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 use Aws\S3\S3Client;
 use Aws\S3\Exception\S3Exception;
-
-$dbFile = __DIR__ . '/data/mitas_system.sqlite';
+require_once __DIR__ . '/session_bootstrap.php';
+mitas_start_session();
+require_once __DIR__ . '/auth.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -13,11 +14,26 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-session_start();
+require_once __DIR__ . '/db.php';
+$pdo = mitas_db();
+$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+mitas_require_permission($pdo, 'backups.manage', true);
+$csrf = $_POST['csrf_token'] ?? '';
+if (!hash_equals($_SESSION['csrf_token'] ?? '', $csrf)) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Invalid CSRF']);
+    exit;
+}
 
-if (empty($_SESSION['user'])) {
-    http_response_code(403);
-    echo json_encode(['error' => 'Not logged in']);
+if ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) !== 'sqlite') {
+    http_response_code(501);
+    echo json_encode(['error' => 'SQLite file backup is not available for PostgreSQL. Use Supabase database backups.']);
+    exit;
+}
+$dbFile = getenv('MITAS_SQLITE_PATH') ?: (__DIR__ . '/data/mitas_system.sqlite');
+if (!is_file($dbFile)) {
+    http_response_code(404);
+    echo json_encode(['error' => 'SQLite database file not found']);
     exit;
 }
 

@@ -1,16 +1,14 @@
 <?php
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
+mitas_start_session();
 header('Content-Type: application/json; charset=utf-8');
 $dbFile = __DIR__ . '/data/mitas_system.sqlite';
-$pdo = new PDO('sqlite:' . $dbFile);
+require_once __DIR__ . '/db.php';
+$pdo = mitas_db();
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-// simple auth check
-if (!isset($_SESSION['user_id'])) {
-    http_response_code(403);
-    echo json_encode(['error'=>'not_logged_in']);
-    exit;
-}
+require_once __DIR__ . '/auth.php';
+mitas_require_permission($pdo, 'layouts.manage', true);
 
 // read JSON body if provided
 $raw = file_get_contents('php://input');

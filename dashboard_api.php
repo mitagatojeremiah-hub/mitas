@@ -1,8 +1,12 @@
 <?php
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
+mitas_start_session();
 $dbFile = __DIR__ . '/data/mitas_system.sqlite';
-$pdo = new PDO('sqlite:' . $dbFile);
+require_once __DIR__ . '/db.php';
+$pdo = mitas_db();
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+require_once __DIR__ . '/auth.php';
+mitas_require_permission($pdo, 'dashboard.view', true);
 
 $purchaseSum = (float)$pdo->query('SELECT COALESCE(SUM(amount), 0) FROM purchases')->fetchColumn();
 $invoiceRevenue = (float)$pdo->query('SELECT COALESCE(SUM(total_amount), 0) FROM invoices')->fetchColumn();
@@ -99,4 +103,13 @@ usort($activity, function ($a, $b) { return strcmp($b['time'], $a['time']); });
 $activity = array_slice($activity, 0, 8);
 
 header('Content-Type: application/json');
+if (!mitas_can('reports.view')) {
+    unset($counts['inventory_value'], $counts['total_profit'], $counts['total_loss'], $counts['net_profit']);
+}
+if (!mitas_can('reports.view')) {
+    foreach ($activity as &$activityItem) {
+        unset($activityItem['profit']);
+    }
+    unset($activityItem);
+}
 echo json_encode(['counts' => $counts, 'activity' => $activity]);

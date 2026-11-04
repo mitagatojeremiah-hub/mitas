@@ -1,9 +1,15 @@
 <?php
-session_start();
+require_once __DIR__ . '/session_bootstrap.php';
+mitas_start_session();
+require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/translations.php';
 $dbFile = __DIR__ . '/data/mitas_system.sqlite';
-$pdo = new PDO('sqlite:' . $dbFile);
+require_once __DIR__ . '/db.php';
+$pdo = mitas_db();
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+if (PHP_SAPI !== 'cli') {
+    mitas_require_permission($pdo, 'invoices.view');
+}
 
 $invoiceId = (int)($_GET['invoice'] ?? 0);
 $stmt = $pdo->prepare('SELECT * FROM invoices WHERE id = ?');
@@ -61,6 +67,21 @@ $balanceDue = max(0, $invoiceTotal - $paidTotal);
         th, td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; }
         th { background: #f8fafc; }
         .total { text-align: right; font-weight: 700; margin-top: 12px; }
+        .box { max-width: 1100px; margin: 0 auto; overflow-x: auto; }
+        @media (max-width: 640px) {
+            body { padding: 10px; }
+            .box { padding: 12px; }
+            .header { flex-direction: column; gap: 12px; }
+            .company { flex-wrap: wrap; }
+            .meta { text-align: left; }
+            .details { grid-template-columns: minmax(0, 1fr); }
+            table { min-width: 600px; }
+            th, td { padding: 8px; }
+        }
+        @media print {
+            body { padding: 0; }
+            .box { max-width: none; border: 0; }
+        }
     </style>
 </head>
 <body>
