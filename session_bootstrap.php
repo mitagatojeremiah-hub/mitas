@@ -62,6 +62,19 @@ final class MitasDatabaseSessionHandler implements SessionHandlerInterface, Sess
     }
 }
 
+function mitas_render_setup_error(string $title, string $message): void
+{
+    http_response_code(503);
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'
+        . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+        . '</title><link rel="stylesheet" href="styles.css"></head><body class="guest-page"><a class="skip-link" href="#main-content">Skip to content</a><main id="main-content" class="login-wrap"><section class="panel login-panel" role="alert"><h1>'
+        . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+        . '</h1><p>' . htmlspecialchars($message, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+        . '</p></section></main></body></html>';
+    exit;
+}
+
 function mitas_start_session(): void
 {
     if (session_status() === PHP_SESSION_ACTIVE) {
@@ -83,20 +96,12 @@ function mitas_start_session(): void
         $pdo = mitas_db();
     } catch (Throwable $error) {
         error_log('Mitas database initialization failed; connection details were omitted.');
-        http_response_code(503);
-        header('Content-Type: text/html; charset=utf-8');
         $isVercel = getenv('VERCEL') === '1';
         $title = $isVercel ? 'Database setup required' : 'Database unavailable';
         $message = $isVercel
-            ? 'Add DATABASE_URL in Vercel Project Settings using your Supabase PostgreSQL Session pooler URL, then redeploy. If it is already set, verify that the URL and database password are correct.'
+            ? 'Add DATABASE_URL in Vercel Project Settings using your Supabase PostgreSQL Session pooler URL, then redeploy. If it is already set, verify the URL and database password.'
             : 'Check the database configuration and make sure the database server is available.';
-        echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'
-            . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
-            . '</title><link rel="stylesheet" href="styles.css"></head><body class="guest-page"><a class="skip-link" href="#main-content">Skip to content</a><main id="main-content" class="login-wrap"><section class="panel login-panel" role="alert"><h1>'
-            . htmlspecialchars($title, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
-            . '</h1><p>' . htmlspecialchars($message, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
-            . '</p></section></main></body></html>';
-        exit;
+        mitas_render_setup_error($title, $message);
     }
 
     $pdo->exec('CREATE TABLE IF NOT EXISTS mitas_sessions (

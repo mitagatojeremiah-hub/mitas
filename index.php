@@ -621,10 +621,10 @@ if ($userCount === 0) {
     $initialAdminPassword = (string)getenv('MITAS_INITIAL_ADMIN_PASSWORD');
     $initialAdminEmail = trim((string)getenv('MITAS_INITIAL_ADMIN_EMAIL'));
     if (!mitas_password_is_strong($initialAdminPassword)) {
-        throw new RuntimeException('Set MITAS_INITIAL_ADMIN_PASSWORD to a strong 12+ character value before the first Mitas request.');
+        mitas_render_setup_error('Initial Admin setup required', 'Set MITAS_INITIAL_ADMIN_PASSWORD in Vercel to a unique password with at least 12 characters, uppercase, lowercase, a number, and a symbol, then redeploy.');
     }
     if ($initialAdminEmail !== '' && !filter_var($initialAdminEmail, FILTER_VALIDATE_EMAIL)) {
-        throw new RuntimeException('MITAS_INITIAL_ADMIN_EMAIL must be a valid email address when provided.');
+        mitas_render_setup_error('Initial Admin email setup required', 'Remove MITAS_INITIAL_ADMIN_EMAIL or set it to a valid email address in Vercel, then redeploy.');
     }
     $stmt = $pdo->prepare('INSERT INTO users (username, password_hash, role, is_active, email, email_verified_at, session_version, must_change_password) VALUES (?, ?, ?, 1, ?, NULL, 0, 1)');
     $stmt->execute(['admin', password_hash($initialAdminPassword, PASSWORD_DEFAULT), 'admin', $initialAdminEmail !== '' ? $initialAdminEmail : null]);
